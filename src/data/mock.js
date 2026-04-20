@@ -8,7 +8,7 @@ export const CLINICA_INFO = {
 }
 
 export const USUARIOS_MOCK = [
-  { id: 1, nombre: "Dr. Alejandro Rivas", rol: "medico", especialidad: "Medicina General", cedula: "3891045", pin: "1234", activo: true },
+  { id: 1, nombre: "Dr. Jorge Francisco Montoya Sarmiento", rol: "medico", especialidad: "Medicina General", cedula: "12834216", pin: "1234", activo: true },
   { id: 2, nombre: "Enf. Marisol Fuentes", rol: "enfermera", especialidad: "Enfermería", cedula: "5672310", pin: "5678", activo: true },
   { id: 3, nombre: "Recep. Carlos Domínguez", rol: "recepcion", especialidad: "Administración", cedula: "ADM001", pin: "9012", activo: true },
 ]
@@ -54,7 +54,7 @@ export const PACIENTES_MOCK = [
     notas: [
       {
         id: 1, fecha: "2024-01-15 10:30",
-        autor: "Dr. Alejandro Rivas", cedula: "3891045", tipo: "evolucion",
+        autor: "Dr. Jorge Francisco Montoya Sarmiento", cedula: "12834216", tipo: "evolucion",
         subjetivo: "Mejoría parcial de cefalea.",
         objetivo: "TA: 142/88 mmHg. FC: 76 lpm.",
         analisis: "Cefalea tipo migraña con probable componente hipertensivo.",
@@ -65,7 +65,7 @@ export const PACIENTES_MOCK = [
     prescripciones: [
       {
         id: 1001, fecha: "15/01/2024",
-        medico: "Dr. Alejandro Rivas", cedula: "3891045",
+        medico: "Dr. Jorge Francisco Montoya Sarmiento", cedula: "12834216",
         medicamentos: [
           { nombre: "Losartán", dosis: "100mg", via: "VO", frecuencia: "c/24h", duracion: "30 días", indicaciones: "Tomar por la mañana con alimentos" },
           { nombre: "Sumatriptán", dosis: "50mg", via: "VO", frecuencia: "Al inicio de crisis, repetir c/2h", duracion: "SOS", indicaciones: "No más de 2 tabletas en 24h" },
