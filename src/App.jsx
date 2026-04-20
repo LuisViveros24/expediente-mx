@@ -6,7 +6,7 @@ import { useState, useRef } from "react";
 const LIMITE_DEMO = 25;
 const CLINICA_INFO = { nombre: "Consultorio Médico ExpedienteMX", direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila", telefono: "871-000-0000", rfc: "CME240101ABC" };
 const USUARIOS_MOCK = [
-  { id: 1, nombre: "Dr. Alejandro Rivas", rol: "medico", especialidad: "Medicina General", cedula: "3891045", pin: "1234", activo: true },
+  { id: 1, nombre: "Dr. Jorge Francisco Montoya Sarmiento", rol: "medico", especialidad: "Medicina General", cedula: "12834216", pin: "1234", activo: true },
   { id: 2, nombre: "Enf. Marisol Fuentes", rol: "enfermera", especialidad: "Enfermería", cedula: "5672310", pin: "5678", activo: true },
   { id: 3, nombre: "Recep. Carlos Domínguez", rol: "recepcion", especialidad: "Administración", cedula: "ADM001", pin: "9012", activo: true },
 ];
@@ -14,10 +14,10 @@ const PACIENTES_MOCK = [{
   id: "EXP-2024-001", folio: "EXP-2024-001", fechaCreacion: "2024-01-15",
   identificacion: { nombre: "María Guadalupe Torres Hernández", fechaNacimiento: "1985-03-22", sexo: "F", curp: "TOHM850322MCOTRR09", rfc: "TOHM850322", estadoCivil: "casada", escolaridad: "licenciatura", ocupacion: "Maestra", nacionalidad: "Mexicana", religion: "Católica", lugarNacimiento: "Torreón, Coahuila", domicilio: "Av. Independencia 456, Col. Centro, Torreón, Coah.", telefono: "871-123-4567", telefonoEmergencia: "871-987-6543", contactoEmergencia: "Juan Torres (esposo)", grupoSanguineo: "O+", alergias: "Penicilina, AINES" },
   historiaClinica: { motivoConsulta: "Cefalea persistente y mareo de 3 días", padecimientoActual: "Cefalea holocraneana 7/10 EVA, mareo no rotatorio, fotofobia, náusea sin vómito.", antecedentesHeredoFamiliares: "Madre: HTA, DM2. Padre: IAM a los 60 años.", antecedentesPersonalesPatologicos: "HTA en control con Losartán 50mg. Migraña desde los 25 años.", antecedentesPersonalesNoPatologicos: "Tabaquismo: negado. Alcoholismo: ocasional.", antecedentesGinecoObstetricos: "G2P2A0. FUM: 10/01/2024. DIU.", antecedentesPediatricos: "", exploFisica: { talla: "1.62", peso: "68", imc: "25.9", ta: "145/90", fc: "78", fr: "16", temp: "36.6", sao2: "97", notasExploracion: "Consciente, orientada. Cráneo normocéfalo. Pupilas isocóricas. Sin rigidez de nuca." } },
-  notas: [{ id: 1, fecha: "2024-01-15 10:30", autor: "Dr. Alejandro Rivas", cedula: "3891045", tipo: "evolucion", subjetivo: "Mejoría parcial de cefalea.", objetivo: "TA: 142/88 mmHg. FC: 76 lpm.", analisis: "Cefalea tipo migraña con probable componente hipertensivo.", plan: "Ajuste de Losartán a 100mg. Sumatriptán 50mg SOS.", firmado: true }],
-  prescripciones: [{ id: 1001, fecha: "15/01/2024", medico: "Dr. Alejandro Rivas", cedula: "3891045", medicamentos: [{ nombre: "Losartán", dosis: "100mg", via: "VO", frecuencia: "c/24h", duracion: "30 días", indicaciones: "Tomar por la mañana con alimentos" }, { nombre: "Sumatriptán", dosis: "50mg", via: "VO", frecuencia: "Al inicio de crisis, repetir c/2h", duracion: "SOS", indicaciones: "No más de 2 tabletas en 24h" }], firmada: true, firmaDigital: null, firmaPaciente: null }],
+  notas: [{ id: 1, fecha: "2024-01-15 10:30", autor: "Dr. Jorge Francisco Montoya Sarmiento", cedula: "12834216", tipo: "evolucion", subjetivo: "Mejoría parcial de cefalea.", objetivo: "TA: 142/88 mmHg. FC: 76 lpm.", analisis: "Cefalea tipo migraña con probable componente hipertensivo.", plan: "Ajuste de Losartán a 100mg. Sumatriptán 50mg SOS.", firmado: true }],
+  prescripciones: [{ id: 1001, fecha: "15/01/2024", medico: "Dr. Jorge Francisco Montoya Sarmiento", cedula: "12834216", medicamentos: [{ nombre: "Losartán", dosis: "100mg", via: "VO", frecuencia: "c/24h", duracion: "30 días", indicaciones: "Tomar por la mañana con alimentos" }, { nombre: "Sumatriptán", dosis: "50mg", via: "VO", frecuencia: "Al inicio de crisis, repetir c/2h", duracion: "SOS", indicaciones: "No más de 2 tabletas en 24h" }], firmada: true, firmaDigital: null, firmaPaciente: null }],
   consentimientos: [{ id: 2001, fecha: "2024-01-15 10:15", tipo: "consulta_general", texto: "Autorizo la atención médica y el manejo de mis datos conforme a la NOM-004-SSA3-2012 y NOM-024-SSA3-2012. Declaro haber recibido información sobre los procedimientos a realizar, sus beneficios y riesgos. Esta autorización es libre y voluntaria.", firmado: true, testigo: "Enf. Marisol Fuentes", firmaDigital: null, firmaMedico: null }],
-  bitacora: [{ fecha: "2024-01-15 10:15", usuario: "Dr. Alejandro Rivas", accion: "CREAR_EXPEDIENTE", detalle: "Expediente creado" }, { fecha: "2024-01-15 10:30", usuario: "Dr. Alejandro Rivas", accion: "AGREGAR_NOTA", detalle: "Nota SOAP #1001" }]
+  bitacora: [{ fecha: "2024-01-15 10:15", usuario: "Dr. Jorge Francisco Montoya Sarmiento", accion: "CREAR_EXPEDIENTE", detalle: "Expediente creado" }, { fecha: "2024-01-15 10:30", usuario: "Dr. Jorge Francisco Montoya Sarmiento", accion: "AGREGAR_NOTA", detalle: "Nota SOAP #1001" }]
 }];
 
 // ══════════════════════════════════════════════════════════════════
@@ -279,12 +279,12 @@ const Login = ({ onLogin }) => {
         </div>
         <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-2xl">
           <div className="flex flex-col gap-4">
-            <Campo label="Cédula Profesional / ID" value={cedula} onChange={setCedula} placeholder="3891045" required />
+            <Campo label="Cédula Profesional / ID" value={cedula} onChange={setCedula} placeholder="12834216" required />
             <Campo label="PIN de acceso" type="password" value={pin} onChange={setPin} placeholder="••••" required />
             {error && <div className="bg-red-900/30 border border-red-700 rounded-lg px-3 py-2 text-xs text-red-300">{error}</div>}
             <button onClick={handleLogin} disabled={intentos >= 3} className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl text-sm">Iniciar sesión</button>
           </div>
-          <p className="text-center text-[10px] text-slate-600 mt-4 pt-4 border-t border-slate-800">Demo: Cédula <span className="text-slate-400">3891045</span> · PIN <span className="text-slate-400">1234</span></p>
+          <p className="text-center text-[10px] text-slate-600 mt-4 pt-4 border-t border-slate-800">Demo: Cédula <span className="text-slate-400">12834216</span> · PIN <span className="text-slate-400">1234</span></p>
         </div>
       </div>
     </div>
