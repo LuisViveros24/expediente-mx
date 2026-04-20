@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
+import { CLINICA_INFO } from "./data/mock";
+import ModalReporteExpediente from "./components/ModalReporteExpediente";
+import ModalReporteGeneral from "./components/ModalReporteGeneral";
 
 // ══════════════════════════════════════════════════════════════════
 // CONSTANTES GLOBALES
 // ══════════════════════════════════════════════════════════════════
 const LIMITE_DEMO = 25;
-const CLINICA_INFO = { nombre: "Consultorio Médico Mexpediente", direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila", telefono: "871-000-0000", rfc: "CME240101ABC" };
 const USUARIOS_MOCK = [
   { id: 1, nombre: "Dr. Jorge Francisco Montoya Sarmiento", rol: "medico", especialidad: "Medicina General", cedula: "12834216", pin: "1234", activo: true },
   { id: 2, nombre: "Enf. Marisol Fuentes", rol: "enfermera", especialidad: "Enfermería", cedula: "5672310", pin: "5678", activo: true },
@@ -723,7 +725,10 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
         <button onClick={onVolver} className="text-slate-400 hover:text-white text-sm">← Volver</button>
         <div className="w-px h-4 bg-slate-700" />
         <div><p className="text-sm font-bold text-white">{paciente.identificacion.nombre}</p><p className="text-[10px] text-slate-500 font-mono">{paciente.folio} · {calcEdad(paciente.identificacion.fechaNacimiento)} · Creado: {paciente.fechaCreacion}</p></div>
-        {paciente.identificacion.alergias && <div className="ml-auto flex items-center gap-1 bg-red-900/40 border border-red-700/50 rounded-lg px-2 py-1"><span className="text-xs">⚠️</span><span className="text-xs text-red-300 font-semibold">Alergias: {paciente.identificacion.alergias}</span></div>}
+        {paciente.identificacion.alergias && <div className="flex items-center gap-1 bg-red-900/40 border border-red-700/50 rounded-lg px-2 py-1"><span className="text-xs">⚠️</span><span className="text-xs text-red-300 font-semibold">Alergias: {paciente.identificacion.alergias}</span></div>}
+        <div className="ml-auto">
+          <ModalReporteExpediente paciente={paciente} usuarioActual={usuarioActual} />
+        </div>
       </div>
       <div className="flex gap-1 px-4 py-2 bg-slate-900/60 border-b border-slate-800 overflow-x-auto">
         {tabs.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${tab === t.id ? "bg-sky-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"}`}><span>{t.icono}</span>{t.label}</button>)}
@@ -845,6 +850,7 @@ export default function App() {
   const [pacientes, setPacientes] = useState(PACIENTES_MOCK);
   const [vista, setVista] = useState("lista");
   const [pacienteActivo, setPacienteActivo] = useState(null);
+  const [modalReporteGeneral, setModalReporteGeneral] = useState(false);
 
   const handleLogin = u => setUsuario(u);
   const handleLogout = () => { setUsuario(null); setPacienteActivo(null); setVista("lista"); };
@@ -868,6 +874,9 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:block text-right"><p className="text-xs font-semibold text-slate-200">{usuario.nombre}</p><p className="text-[10px] text-slate-500">{usuario.especialidad}</p></div>
+          {vista === "lista" && pacientes.length >= 2 && (
+            <button onClick={() => setModalReporteGeneral(true)} className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-slate-800 px-2.5 py-1.5 rounded-lg transition-all font-semibold">📊 Reporte</button>
+          )}
           <button onClick={() => setVista("acceso")} className={`text-xs px-2.5 py-1.5 rounded-lg transition-all ${vista === "acceso" ? "bg-sky-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}>🔐</button>
           <button onClick={handleLogout} className="text-xs text-slate-400 hover:text-red-400 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition-all">Salir</button>
         </div>
@@ -880,6 +889,13 @@ export default function App() {
         {vista === "nuevo" && <NuevoExpediente onGuardar={crearExpediente} onCancelar={() => setVista("lista")} usuarioActual={usuario} />}
         {vista === "acceso" && <div className="p-4 max-w-3xl mx-auto"><ControlAcceso usuarioActual={usuario} /></div>}
       </div>
+      {modalReporteGeneral && (
+        <ModalReporteGeneral
+          pacientes={pacientes}
+          usuarioActual={usuario}
+          onCerrar={() => setModalReporteGeneral(false)}
+        />
+      )}
     </div>
   );
 }
