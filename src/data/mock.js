@@ -1,7 +1,7 @@
 export const LIMITE_DEMO = 25
 
 export const CLINICA_INFO = {
-  nombre: "Consultorio Médico ExpedienteMX",
+  nombre: "Consultorio Médico Mexpediente",
   direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila",
   telefono: "871-000-0000",
   rfc: "CME240101ABC",

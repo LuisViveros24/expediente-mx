@@ -1,5 +1,5 @@
 /**
- * Utilidades generales del sistema ExpedienteMX
+ * Utilidades generales del sistema Mexpediente
  * NOM-004-SSA3-2012 / NOM-024-SSA3-2012
  */
 

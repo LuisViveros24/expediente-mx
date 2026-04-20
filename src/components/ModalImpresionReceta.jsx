@@ -164,7 +164,7 @@ export default function ModalImpresionReceta({ receta, paciente, onCerrar }) {
           {/* Pie */}
           <div style={{ marginTop:"28px", paddingTop:"10px", borderTop:"1px solid #f3f4f6", textAlign:"center" }}>
             <p style={{ fontSize:"9px", color:"#9ca3af", lineHeight:1.6 }}>
-              Documento generado por ExpedienteMX · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012<br />
+              Documento generado por Mexpediente · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012<br />
               Válido únicamente con firma del médico responsable
             </p>
           </div>

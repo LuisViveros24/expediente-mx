@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 // CONSTANTES GLOBALES
 // ══════════════════════════════════════════════════════════════════
 const LIMITE_DEMO = 25;
-const CLINICA_INFO = { nombre: "Consultorio Médico ExpedienteMX", direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila", telefono: "871-000-0000", rfc: "CME240101ABC" };
+const CLINICA_INFO = { nombre: "Consultorio Médico Mexpediente", direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila", telefono: "871-000-0000", rfc: "CME240101ABC" };
 const USUARIOS_MOCK = [
   { id: 1, nombre: "Dr. Jorge Francisco Montoya Sarmiento", rol: "medico", especialidad: "Medicina General", cedula: "12834216", pin: "1234", activo: true },
   { id: 2, nombre: "Enf. Marisol Fuentes", rol: "enfermera", especialidad: "Enfermería", cedula: "5672310", pin: "5678", activo: true },
@@ -246,7 +246,7 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
 
           {/* Pie */}
           <div style={{ marginTop: "24px", paddingTop: "12px", borderTop: "1px solid #f3f4f6", textAlign: "center" }}>
-            <p style={{ fontSize: "9px", color: "#9ca3af", margin: 0 }}>Documento generado por ExpedienteMX · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012</p>
+            <p style={{ fontSize: "9px", color: "#9ca3af", margin: 0 }}>Documento generado por Mexpediente · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012</p>
             <p style={{ fontSize: "9px", color: "#9ca3af", margin: 0 }}>Válido únicamente con firma del médico responsable</p>
           </div>
         </div>
@@ -272,7 +272,7 @@ const Login = ({ onLogin }) => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/30 mb-4">
             <svg className="w-8 h-8 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           </div>
-          <h1 className="text-2xl font-black text-white" style={{ fontFamily: "Georgia, serif" }}>ExpedienteMX</h1>
+          <h1 className="text-2xl font-black text-white" style={{ fontFamily: "Georgia, serif" }}>Mexpediente</h1>
           <p className="text-slate-400 text-xs mt-1 tracking-widest uppercase">Sistema de Gestión de Historial Clínico</p>
           <div className="flex justify-center gap-2 mt-2"><Badge label="NOM-004-SSA3" color="blue" /><Badge label="NOM-024-SSA3" color="green" /></div>
           <div className="mt-2 inline-block bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-1"><p className="text-[10px] text-amber-300">🔬 Versión Demo · Máximo {LIMITE_DEMO} expedientes</p></div>
@@ -862,7 +862,7 @@ export default function App() {
           <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center">
             <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           </div>
-          <button onClick={() => setVista("lista")} className="text-sm font-black text-white hover:text-sky-300 transition-colors" style={{ fontFamily: "Georgia, serif" }}>ExpedienteMX</button>
+          <button onClick={() => setVista("lista")} className="text-sm font-black text-white hover:text-sky-300 transition-colors" style={{ fontFamily: "Georgia, serif" }}>Mexpediente</button>
           <div className="hidden sm:flex items-center gap-1"><Badge label="NOM-004" color="blue" /><Badge label="NOM-024" color="green" /></div>
           <div className="hidden sm:block bg-amber-900/30 border border-amber-700/50 rounded px-2 py-0.5"><span className="text-[10px] text-amber-300">Demo · {pacientes.length}/{LIMITE_DEMO}</span></div>
         </div>
