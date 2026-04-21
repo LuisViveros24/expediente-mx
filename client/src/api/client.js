@@ -1,0 +1,72 @@
+const BASE = '/api/v1'
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  })
+
+  if (res.status === 401) {
+    window.dispatchEvent(new Event('session-expired'))
+    throw new Error('No autenticado')
+  }
+  if (!res.ok) {
+    const msg = await res.text().catch(() => 'Error desconocido')
+    throw new Error(msg)
+  }
+  return res.json()
+}
+
+// Auth
+export const login = (email, password) =>
+  apiFetch('/auth/login', { method: 'POST', body: { email, password } })
+export const logout = () =>
+  apiFetch('/auth/logout', { method: 'POST' })
+export const getMe = () => apiFetch('/auth/me')
+
+// Pacientes
+export const getPacientes = () => apiFetch('/pacientes')
+export const getPaciente = (id) => apiFetch(`/pacientes/${id}`)
+export const createPaciente = (data) =>
+  apiFetch('/pacientes', { method: 'POST', body: data })
+export const updatePaciente = (id, data) =>
+  apiFetch(`/pacientes/${id}`, { method: 'PUT', body: data })
+export const deletePaciente = (id) =>
+  apiFetch(`/pacientes/${id}`, { method: 'DELETE' })
+
+// Historia clínica
+export const getHistoria = (id) => apiFetch(`/pacientes/${id}/historia`)
+export const updateHistoria = (id, data) =>
+  apiFetch(`/pacientes/${id}/historia`, { method: 'PUT', body: data })
+
+// Notas
+export const getNotas = (id) => apiFetch(`/pacientes/${id}/notas`)
+export const createNota = (id, data) =>
+  apiFetch(`/pacientes/${id}/notas`, { method: 'POST', body: data })
+export const firmarNota = (id) =>
+  apiFetch(`/notas/${id}/firmar`, { method: 'PUT' })
+
+// Prescripciones
+export const getPrescripciones = (id) => apiFetch(`/pacientes/${id}/prescripciones`)
+export const createPrescripcion = (id, data) =>
+  apiFetch(`/pacientes/${id}/prescripciones`, { method: 'POST', body: data })
+export const firmarPrescripcion = (id, data) =>
+  apiFetch(`/prescripciones/${id}/firmar`, { method: 'PUT', body: data })
+
+// Consentimientos
+export const getConsentimientos = (id) => apiFetch(`/pacientes/${id}/consentimientos`)
+export const createConsentimiento = (id, data) =>
+  apiFetch(`/pacientes/${id}/consentimientos`, { method: 'POST', body: data })
+
+// Bitácora
+export const getBitacora = (id) => apiFetch(`/pacientes/${id}/bitacora`)
+export const getBitacoraGlobal = () => apiFetch('/bitacora')
+
+// Usuarios
+export const getUsuarios = () => apiFetch('/usuarios')
+export const createUsuario = (data) =>
+  apiFetch('/usuarios', { method: 'POST', body: data })
+export const updateUsuario = (id, data) =>
+  apiFetch(`/usuarios/${id}`, { method: 'PUT', body: data })
