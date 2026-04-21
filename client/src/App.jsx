@@ -1,26 +1,17 @@
-import { useState, useRef } from "react";
-import { CLINICA_INFO } from "./data/mock";
+import { useState, useRef, useEffect } from "react";
+import * as api from "./api/client.js";
 import ModalReporteExpediente from "./components/ModalReporteExpediente";
 import ModalReporteGeneral from "./components/ModalReporteGeneral";
 
 // ══════════════════════════════════════════════════════════════════
 // CONSTANTES GLOBALES
 // ══════════════════════════════════════════════════════════════════
-const LIMITE_DEMO = 25;
-const USUARIOS_MOCK = [
-  { id: 1, nombre: "Dr. Jorge Francisco Montoya Sarmiento", rol: "medico", especialidad: "Medicina General", cedula: "12834216", pin: "1234", activo: true },
-  { id: 2, nombre: "Enf. Marisol Fuentes", rol: "enfermera", especialidad: "Enfermería", cedula: "5672310", pin: "5678", activo: true },
-  { id: 3, nombre: "Recep. Carlos Domínguez", rol: "recepcion", especialidad: "Administración", cedula: "ADM001", pin: "9012", activo: true },
-];
-const PACIENTES_MOCK = [{
-  id: "EXP-2024-001", folio: "EXP-2024-001", fechaCreacion: "2024-01-15",
-  identificacion: { nombre: "María Guadalupe Torres Hernández", fechaNacimiento: "1985-03-22", sexo: "F", curp: "TOHM850322MCOTRR09", rfc: "TOHM850322", estadoCivil: "casada", escolaridad: "licenciatura", ocupacion: "Maestra", nacionalidad: "Mexicana", religion: "Católica", lugarNacimiento: "Torreón, Coahuila", domicilio: "Av. Independencia 456, Col. Centro, Torreón, Coah.", telefono: "871-123-4567", telefonoEmergencia: "871-987-6543", contactoEmergencia: "Juan Torres (esposo)", grupoSanguineo: "O+", alergias: "Penicilina, AINES" },
-  historiaClinica: { motivoConsulta: "Cefalea persistente y mareo de 3 días", padecimientoActual: "Cefalea holocraneana 7/10 EVA, mareo no rotatorio, fotofobia, náusea sin vómito.", antecedentesHeredoFamiliares: "Madre: HTA, DM2. Padre: IAM a los 60 años.", antecedentesPersonalesPatologicos: "HTA en control con Losartán 50mg. Migraña desde los 25 años.", antecedentesPersonalesNoPatologicos: "Tabaquismo: negado. Alcoholismo: ocasional.", antecedentesGinecoObstetricos: "G2P2A0. FUM: 10/01/2024. DIU.", antecedentesPediatricos: "", exploFisica: { talla: "1.62", peso: "68", imc: "25.9", ta: "145/90", fc: "78", fr: "16", temp: "36.6", sao2: "97", notasExploracion: "Consciente, orientada. Cráneo normocéfalo. Pupilas isocóricas. Sin rigidez de nuca." } },
-  notas: [{ id: 1, fecha: "2024-01-15 10:30", autor: "Dr. Jorge Francisco Montoya Sarmiento", cedula: "12834216", tipo: "evolucion", subjetivo: "Mejoría parcial de cefalea.", objetivo: "TA: 142/88 mmHg. FC: 76 lpm.", analisis: "Cefalea tipo migraña con probable componente hipertensivo.", plan: "Ajuste de Losartán a 100mg. Sumatriptán 50mg SOS.", firmado: true }],
-  prescripciones: [{ id: 1001, fecha: "15/01/2024", medico: "Dr. Jorge Francisco Montoya Sarmiento", cedula: "12834216", medicamentos: [{ nombre: "Losartán", dosis: "100mg", via: "VO", frecuencia: "c/24h", duracion: "30 días", indicaciones: "Tomar por la mañana con alimentos" }, { nombre: "Sumatriptán", dosis: "50mg", via: "VO", frecuencia: "Al inicio de crisis, repetir c/2h", duracion: "SOS", indicaciones: "No más de 2 tabletas en 24h" }], firmada: true, firmaDigital: null, firmaPaciente: null }],
-  consentimientos: [{ id: 2001, fecha: "2024-01-15 10:15", tipo: "consulta_general", texto: "Autorizo la atención médica y el manejo de mis datos conforme a la NOM-004-SSA3-2012 y NOM-024-SSA3-2012. Declaro haber recibido información sobre los procedimientos a realizar, sus beneficios y riesgos. Esta autorización es libre y voluntaria.", firmado: true, testigo: "Enf. Marisol Fuentes", firmaDigital: null, firmaMedico: null }],
-  bitacora: [{ fecha: "2024-01-15 10:15", usuario: "Dr. Jorge Francisco Montoya Sarmiento", accion: "CREAR_EXPEDIENTE", detalle: "Expediente creado" }, { fecha: "2024-01-15 10:30", usuario: "Dr. Jorge Francisco Montoya Sarmiento", accion: "AGREGAR_NOTA", detalle: "Nota SOAP #1001" }]
-}];
+const CLINICA_INFO = {
+  nombre: "Consultorio Médico MedpedienteX",
+  direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila",
+  telefono: "871-000-0000",
+  rfc: "CME240101ABC",
+}
 
 // ══════════════════════════════════════════════════════════════════
 // UTILIDADES
@@ -261,32 +252,41 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
 // MÓDULO: LOGIN
 // ══════════════════════════════════════════════════════════════════
 const Login = ({ onLogin }) => {
-  const [cedula, setCedula] = useState(""); const [pin, setPin] = useState(""); const [error, setError] = useState(""); const [intentos, setIntentos] = useState(0);
-  const handleLogin = () => {
-    if (intentos >= 3) { setError("Cuenta bloqueada. Contacte al administrador."); return; }
-    const u = USUARIOS_MOCK.find(u => u.cedula === cedula && u.pin === pin && u.activo);
-    if (u) { onLogin(u); } else { setIntentos(i => i + 1); setError(`Credenciales incorrectas. Intento ${intentos + 1}/3.`); }
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) { setError("Ingresa tu correo y contraseña"); return; }
+    setCargando(true); setError("");
+    try {
+      const { usuario } = await api.login(email, password);
+      onLogin(usuario);
+    } catch (err) {
+      setError(err.message || "Credenciales incorrectas");
+    } finally {
+      setCargando(false);
+    }
   };
+
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "radial-gradient(ellipse at 30% 20%, #0c1a2e 0%, #050a14 60%)" }}>
-      <div className="w-full max-w-md px-6">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/30 mb-4">
-            <svg className="w-8 h-8 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          </div>
-          <h1 className="text-2xl font-black text-white" style={{ fontFamily: "Georgia, serif" }}>MedpedienteX</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: "Georgia, serif" }}>MedpedienteX</h1>
           <p className="text-slate-400 text-xs mt-1 tracking-widest uppercase">Sistema de Gestión de Historial Clínico</p>
           <div className="flex justify-center gap-2 mt-2"><Badge label="NOM-004-SSA3" color="blue" /><Badge label="NOM-024-SSA3" color="green" /></div>
-          <div className="mt-2 inline-block bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-1"><p className="text-[10px] text-amber-300">🔬 Versión Demo · Máximo {LIMITE_DEMO} expedientes</p></div>
         </div>
         <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-2xl">
           <div className="flex flex-col gap-4">
-            <Campo label="Cédula Profesional / ID" value={cedula} onChange={setCedula} placeholder="12834216" required />
-            <Campo label="PIN de acceso" type="password" value={pin} onChange={setPin} placeholder="••••" required />
+            <Campo label="Correo electrónico" type="email" value={email} onChange={setEmail} placeholder="correo@tuclinica.com" required />
+            <Campo label="Contraseña" type="password" value={password} onChange={setPassword} placeholder="••••••••" required />
             {error && <div className="bg-red-900/30 border border-red-700 rounded-lg px-3 py-2 text-xs text-red-300">{error}</div>}
-            <button onClick={handleLogin} disabled={intentos >= 3} className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl text-sm">Iniciar sesión</button>
+            <button onClick={handleLogin} disabled={cargando} className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl text-sm">
+              {cargando ? "Iniciando sesión..." : "Iniciar sesión"}
+            </button>
           </div>
-          <p className="text-center text-[10px] text-slate-600 mt-4 pt-4 border-t border-slate-800">Demo: Cédula <span className="text-slate-400">12834216</span> · PIN <span className="text-slate-400">1234</span></p>
         </div>
       </div>
     </div>
@@ -696,14 +696,7 @@ const ControlAcceso = ({ usuarioActual }) => {
         <div className="flex flex-col gap-2">{info.permisos.map(p => <div key={p} className="flex items-center gap-2 bg-slate-800/40 rounded-lg px-3 py-2"><span className="text-emerald-400 text-xs">✓</span><span className="text-sm text-slate-300">{p}</span></div>)}</div>
       </Seccion>
       <Seccion titulo="Usuarios del sistema (NOM-024 §5.4)" icono="👥" colapsable>
-        <div className="flex flex-col gap-2">
-          {USUARIOS_MOCK.map(u => (
-            <div key={u.id} className="flex items-center justify-between bg-slate-800/40 rounded-lg px-3 py-2.5">
-              <div><p className="text-sm text-slate-200 font-medium">{u.nombre}</p><p className="text-xs text-slate-500">{u.especialidad} · Céd: {u.cedula}</p></div>
-              <div className="flex gap-1.5"><Badge label={roles[u.rol]?.label || u.rol} color="blue" /><Badge label={u.activo ? "Activo" : "Inactivo"} color={u.activo ? "green" : "red"} /></div>
-            </div>
-          ))}
-        </div>
+        <p className="text-xs text-slate-500">La gestión de usuarios se realiza desde el panel de administración del servidor.</p>
       </Seccion>
     </div>
   );
@@ -757,29 +750,21 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
 const ListaPacientes = ({ pacientes, onSeleccionar, onNuevo, usuarioActual }) => {
   const [busqueda, setBusqueda] = useState("");
   const filtrados = pacientes.filter(p => p.identificacion.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.folio.toLowerCase().includes(busqueda.toLowerCase()) || p.identificacion.curp.toLowerCase().includes(busqueda.toLowerCase()));
-  const puedeCrear = pacientes.length < LIMITE_DEMO;
-  const pct = Math.round((pacientes.length / LIMITE_DEMO) * 100);
+  const puedeCrear = true;
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div><h2 className="text-lg font-black text-white">Expedientes Clínicos</h2><p className="text-xs text-slate-500">{pacientes.length} de {LIMITE_DEMO} registros en modo demo</p></div>
+        <div><h2 className="text-lg font-black text-white">Expedientes Clínicos</h2><p className="text-xs text-slate-500">{pacientes.length} expedientes</p></div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-            <div className="w-20 h-1.5 bg-slate-700 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? "#ef4444" : pct >= 80 ? "#f59e0b" : "#0A2540" }} /></div>
-            <span className="text-[10px] text-slate-400">{pacientes.length}/{LIMITE_DEMO}</span>
-          </div>
           {(usuarioActual.rol === "medico" || usuarioActual.rol === "recepcion") && (
-            <button onClick={onNuevo} disabled={!puedeCrear} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-xl transition-all">
-              {puedeCrear ? "+ Nuevo expediente" : "Límite alcanzado"}
+            <button onClick={onNuevo} className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all">
+              + Nuevo expediente
             </button>
           )}
         </div>
       </div>
 
-      {!puedeCrear && (
-        <div className="mb-4 bg-amber-900/30 border border-amber-700/50 rounded-xl px-4 py-3 text-xs text-amber-300">⚠️ Límite demo de {LIMITE_DEMO} expedientes alcanzado. Para producción sin restricciones, migre a Flask + PostgreSQL.</div>
-      )}
 
       <div className="relative mb-4">
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar por nombre, folio o CURP…" className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-500 pl-9" />
@@ -847,17 +832,61 @@ const NuevoExpediente = ({ onGuardar, onCancelar, usuarioActual }) => {
 // ══════════════════════════════════════════════════════════════════
 export default function App() {
   const [usuario, setUsuario] = useState(null);
-  const [pacientes, setPacientes] = useState(PACIENTES_MOCK);
+  const [pacientes, setPacientes] = useState([]);
   const [vista, setVista] = useState("lista");
   const [pacienteActivo, setPacienteActivo] = useState(null);
   const [modalReporteGeneral, setModalReporteGeneral] = useState(false);
+  const [inicializando, setInicializando] = useState(true);
 
-  const handleLogin = u => setUsuario(u);
-  const handleLogout = () => { setUsuario(null); setPacienteActivo(null); setVista("lista"); };
+  useEffect(() => {
+    api.getMe()
+      .then(({ usuario }) => {
+        setUsuario(usuario);
+        return api.getPacientes();
+      })
+      .then(setPacientes)
+      .catch(() => {})
+      .finally(() => setInicializando(false));
+
+    const onExpired = () => { setUsuario(null); setPacientes([]); };
+    window.addEventListener('session-expired', onExpired);
+    return () => window.removeEventListener('session-expired', onExpired);
+  }, []);
+
+  const handleLogin = async (usuarioLogueado) => {
+    setUsuario(usuarioLogueado);
+    const lista = await api.getPacientes().catch(() => []);
+    setPacientes(lista);
+    setVista("lista");
+  };
+
+  const handleLogout = async () => {
+    await api.logout().catch(() => {});
+    setUsuario(null);
+    setPacientes([]);
+    setPacienteActivo(null);
+    setVista("lista");
+  };
+
   const abrirExpediente = p => { setPacienteActivo(p); setVista("expediente"); };
-  const actualizarPaciente = p => { setPacientes(prev => prev.map(x => x.id === p.id ? p : x)); setPacienteActivo(p); };
-  const crearExpediente = nuevo => { if (pacientes.length >= LIMITE_DEMO) { alert(`Límite demo de ${LIMITE_DEMO} expedientes alcanzado.`); return; } setPacientes(prev => [nuevo, ...prev]); setVista("lista"); };
 
+  const actualizarPaciente = async (p) => {
+    try {
+      const actualizado = await api.updatePaciente(p.id, p.identificacion || p);
+      setPacientes(prev => prev.map(x => x.id === actualizado.id ? actualizado : x));
+      setPacienteActivo(actualizado);
+    } catch (err) { alert(err.message); }
+  };
+
+  const crearExpediente = async (nuevo) => {
+    try {
+      const creado = await api.createPaciente(nuevo);
+      setPacientes(prev => [creado, ...prev]);
+      setVista("lista");
+    } catch (err) { alert(err.message); }
+  };
+
+  if (inicializando) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><p className="text-slate-400">Cargando...</p></div>;
   if (!usuario) return <Login onLogin={handleLogin} />;
 
   return (
@@ -870,7 +899,6 @@ export default function App() {
           </div>
           <button onClick={() => setVista("lista")} className="text-sm font-black text-white hover:text-sky-300 transition-colors" style={{ fontFamily: "Georgia, serif" }}>MedpedienteX</button>
           <div className="hidden sm:flex items-center gap-1"><Badge label="NOM-004" color="blue" /><Badge label="NOM-024" color="green" /></div>
-          <div className="hidden sm:block bg-amber-900/30 border border-amber-700/50 rounded px-2 py-0.5"><span className="text-[10px] text-amber-300">Demo · {pacientes.length}/{LIMITE_DEMO}</span></div>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:block text-right"><p className="text-xs font-semibold text-slate-200">{usuario.nombre}</p><p className="text-[10px] text-slate-500">{usuario.especialidad}</p></div>

@@ -1,4 +1,9 @@
-import { CLINICA_INFO } from "../data/mock"
+const CLINICA_INFO = {
+  nombre: "Consultorio Médico MedpedienteX",
+  direccion: "Av. Juárez 123, Col. Centro, Torreón, Coahuila",
+  telefono: "871-000-0000",
+  rfc: "CME240101ABC",
+}
 import { calcEdad } from "../utils/helpers"
 import { Badge } from "./ui"
 
