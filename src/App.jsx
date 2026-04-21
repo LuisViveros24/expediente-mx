@@ -84,7 +84,7 @@ const PadFirma = ({ titulo, onFirmar, onCancelar }) => {
   };
 
   const iniciar = e => { e.preventDefault(); const c = canvasRef.current, ctx = c.getContext("2d"), p = getPos(e, c); ctx.beginPath(); ctx.moveTo(p.x, p.y); dibujando.current = true; setTieneFirma(true); };
-  const dibujar = e => { e.preventDefault(); if (!dibujando.current) return; const c = canvasRef.current, ctx = c.getContext("2d"), p = getPos(e, c); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#1e3a8a"; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); };
+  const dibujar = e => { e.preventDefault(); if (!dibujando.current) return; const c = canvasRef.current, ctx = c.getContext("2d"), p = getPos(e, c); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#0A2540"; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); };
   const terminar = e => { e?.preventDefault(); dibujando.current = false; };
   const limpiar = () => { canvasRef.current.getContext("2d").clearRect(0, 0, 480, 180); setTieneFirma(false); };
   const confirmar = () => { if (tieneFirma) onFirmar(canvasRef.current.toDataURL("image/png")); };
@@ -127,24 +127,24 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
     const ventana = window.open("", "_blank", "width=800,height=600");
     ventana.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receta ${receta.id}</title><style>
       body { font-family: Georgia, serif; color: #111; margin: 0; padding: 20px; }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a8a; padding-bottom: 16px; margin-bottom: 20px; }
-      .clinica-nombre { font-size: 18px; font-weight: 900; color: #1e3a8a; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0A2540; padding-bottom: 16px; margin-bottom: 20px; }
+      .clinica-nombre { font-size: 18px; font-weight: 900; color: #0A2540; }
       .clinica-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
       .folio { text-align: right; }
       .folio p { font-size: 11px; color: #6b7280; margin: 0; }
-      .folio .num { font-family: monospace; font-size: 14px; font-weight: bold; color: #1e3a8a; }
+      .folio .num { font-family: monospace; font-size: 14px; font-weight: bold; color: #0A2540; }
       .medico-box { background: #eff6ff; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
       .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af; }
-      .medico-nombre { font-size: 14px; font-weight: 700; color: #1e3a8a; }
+      .medico-nombre { font-size: 14px; font-weight: 700; color: #0A2540; }
       .medico-cedula { font-size: 11px; color: #6b7280; }
       .paciente-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
       .campo-val { font-size: 13px; font-weight: 600; }
       .alergia { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 11px; font-weight: 700; color: #b91c1c; }
       .rx-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-      .rx-symbol { font-size: 36px; font-weight: 900; color: #1e3a8a; line-height: 1; }
+      .rx-symbol { font-size: 36px; font-weight: 900; color: #0A2540; line-height: 1; }
       .rx-line { flex: 1; height: 1px; background: #bfdbfe; }
-      .medicamento { border-left: 4px solid #1e3a8a; padding: 4px 0 4px 14px; margin-bottom: 16px; }
-      .med-nombre { font-size: 15px; font-weight: 900; color: #1e3a8a; }
+      .medicamento { border-left: 4px solid #0A2540; padding: 4px 0 4px 14px; margin-bottom: 16px; }
+      .med-nombre { font-size: 15px; font-weight: 900; color: #0A2540; }
       .med-datos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; font-size: 12px; color: #374151; }
       .med-indica { font-size: 11px; color: #6b7280; font-style: italic; margin-top: 4px; }
       .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
@@ -179,15 +179,15 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
         {/* Contenido imprimible */}
         <div id={printId} className="p-8 bg-white text-gray-900" style={{ fontFamily: "Georgia, serif" }}>
           {/* Encabezado */}
-          <div className="header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "3px solid #1e3a8a", paddingBottom: "16px", marginBottom: "20px" }}>
+          <div className="header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "3px solid #0A2540", paddingBottom: "16px", marginBottom: "20px" }}>
             <div>
-              <div className="clinica-nombre" style={{ fontSize: "18px", fontWeight: 900, color: "#1e3a8a" }}>{CLINICA_INFO.nombre}</div>
+              <div className="clinica-nombre" style={{ fontSize: "18px", fontWeight: 900, color: "#0A2540" }}>{CLINICA_INFO.nombre}</div>
               <div className="clinica-sub" style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px" }}>{CLINICA_INFO.direccion}</div>
               <div className="clinica-sub" style={{ fontSize: "11px", color: "#6b7280" }}>Tel: {CLINICA_INFO.telefono} · RFC: {CLINICA_INFO.rfc}</div>
             </div>
             <div className="folio" style={{ textAlign: "right" }}>
               <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>Folio de receta</p>
-              <p className="num" style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "bold", color: "#1e3a8a", margin: 0 }}>RX-{receta.id}</p>
+              <p className="num" style={{ fontFamily: "monospace", fontSize: "14px", fontWeight: "bold", color: "#0A2540", margin: 0 }}>RX-{receta.id}</p>
               <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>{receta.fecha}</p>
             </div>
           </div>
@@ -195,7 +195,7 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
           {/* Médico */}
           <div style={{ background: "#eff6ff", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px" }}>
             <p style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#9ca3af", margin: "0 0 2px" }}>Médico responsable</p>
-            <p style={{ fontSize: "14px", fontWeight: 700, color: "#1e3a8a", margin: 0 }}>{receta.medico}</p>
+            <p style={{ fontSize: "14px", fontWeight: 700, color: "#0A2540", margin: 0 }}>{receta.medico}</p>
             <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>Cédula Profesional: {receta.cedula}</p>
           </div>
 
@@ -216,12 +216,12 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
 
           {/* Rx */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <span style={{ fontSize: "36px", fontWeight: 900, color: "#1e3a8a", lineHeight: 1 }}>℞</span>
+            <span style={{ fontSize: "36px", fontWeight: 900, color: "#0A2540", lineHeight: 1 }}>℞</span>
             <div style={{ flex: 1, height: "1px", background: "#bfdbfe" }} />
           </div>
           {receta.medicamentos.map((m, i) => (
-            <div key={i} style={{ borderLeft: "4px solid #1e3a8a", paddingLeft: "14px", marginBottom: "16px" }}>
-              <p style={{ fontSize: "15px", fontWeight: 900, color: "#1e3a8a", margin: "0 0 4px" }}>{i + 1}. {m.nombre}</p>
+            <div key={i} style={{ borderLeft: "4px solid #0A2540", paddingLeft: "14px", marginBottom: "16px" }}>
+              <p style={{ fontSize: "15px", fontWeight: 900, color: "#0A2540", margin: "0 0 4px" }}>{i + 1}. {m.nombre}</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", fontSize: "12px", color: "#374151" }}>
                 <span><b>Dosis:</b> {m.dosis}</span>
                 <span><b>Vía:</b> {m.via}</span>
@@ -248,7 +248,7 @@ const ModalImpresionReceta = ({ receta, paciente, onCerrar }) => {
 
           {/* Pie */}
           <div style={{ marginTop: "24px", paddingTop: "12px", borderTop: "1px solid #f3f4f6", textAlign: "center" }}>
-            <p style={{ fontSize: "9px", color: "#9ca3af", margin: 0 }}>Documento generado por Mexpediente · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012</p>
+            <p style={{ fontSize: "9px", color: "#9ca3af", margin: 0 }}>Documento generado por MedpedienteX · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012</p>
             <p style={{ fontSize: "9px", color: "#9ca3af", margin: 0 }}>Válido únicamente con firma del médico responsable</p>
           </div>
         </div>
@@ -274,7 +274,7 @@ const Login = ({ onLogin }) => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/30 mb-4">
             <svg className="w-8 h-8 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           </div>
-          <h1 className="text-2xl font-black text-white" style={{ fontFamily: "Georgia, serif" }}>Mexpediente</h1>
+          <h1 className="text-2xl font-black text-white" style={{ fontFamily: "Georgia, serif" }}>MedpedienteX</h1>
           <p className="text-slate-400 text-xs mt-1 tracking-widest uppercase">Sistema de Gestión de Historial Clínico</p>
           <div className="flex justify-center gap-2 mt-2"><Badge label="NOM-004-SSA3" color="blue" /><Badge label="NOM-024-SSA3" color="green" /></div>
           <div className="mt-2 inline-block bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-1"><p className="text-[10px] text-amber-300">🔬 Versión Demo · Máximo {LIMITE_DEMO} expedientes</p></div>
@@ -766,7 +766,7 @@ const ListaPacientes = ({ pacientes, onSeleccionar, onNuevo, usuarioActual }) =>
         <div><h2 className="text-lg font-black text-white">Expedientes Clínicos</h2><p className="text-xs text-slate-500">{pacientes.length} de {LIMITE_DEMO} registros en modo demo</p></div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-            <div className="w-20 h-1.5 bg-slate-700 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? "#ef4444" : pct >= 80 ? "#f59e0b" : "#0ea5e9" }} /></div>
+            <div className="w-20 h-1.5 bg-slate-700 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? "#ef4444" : pct >= 80 ? "#f59e0b" : "#0A2540" }} /></div>
             <span className="text-[10px] text-slate-400">{pacientes.length}/{LIMITE_DEMO}</span>
           </div>
           {(usuarioActual.rol === "medico" || usuarioActual.rol === "recepcion") && (
@@ -868,7 +868,7 @@ export default function App() {
           <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center">
             <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           </div>
-          <button onClick={() => setVista("lista")} className="text-sm font-black text-white hover:text-sky-300 transition-colors" style={{ fontFamily: "Georgia, serif" }}>Mexpediente</button>
+          <button onClick={() => setVista("lista")} className="text-sm font-black text-white hover:text-sky-300 transition-colors" style={{ fontFamily: "Georgia, serif" }}>MedpedienteX</button>
           <div className="hidden sm:flex items-center gap-1"><Badge label="NOM-004" color="blue" /><Badge label="NOM-024" color="green" /></div>
           <div className="hidden sm:block bg-amber-900/30 border border-amber-700/50 rounded px-2 py-0.5"><span className="text-[10px] text-amber-300">Demo · {pacientes.length}/{LIMITE_DEMO}</span></div>
         </div>

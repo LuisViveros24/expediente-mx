@@ -13,10 +13,10 @@ const estilosBase = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111827; background: #fff; }
   @page { margin: 20mm; @bottom-right { content: "Página " counter(page); font-size: 9px; color: #9ca3af; } }
-  h1 { font-family: Georgia, serif; font-size: 20px; font-weight: 900; color: #1e3a8a; }
-  h2 { font-family: Georgia, serif; font-size: 15px; font-weight: 700; color: #1e3a8a; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; }
-  h3 { font-size: 12px; font-weight: 700; color: #1e3a8a; margin-bottom: 6px; }
-  .encabezado { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px; }
+  h1 { font-family: Georgia, serif; font-size: 20px; font-weight: 900; color: #0A2540; }
+  h2 { font-family: Georgia, serif; font-size: 15px; font-weight: 700; color: #0A2540; margin-bottom: 8px; border-bottom: 2px solid #0A2540; padding-bottom: 4px; }
+  h3 { font-size: 12px; font-weight: 700; color: #0A2540; margin-bottom: 6px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0A2540; padding-bottom: 12px; margin-bottom: 20px; }
   .clinica-info { font-size: 10px; color: #6b7280; margin-top: 4px; }
   .meta-reporte { text-align: right; font-size: 10px; color: #6b7280; }
   .noms { display: flex; gap: 6px; margin-top: 6px; }
@@ -36,7 +36,7 @@ const estilosBase = `
   tr:nth-child(even) td { background: #f9fafb; }
   .nota-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 10px; page-break-inside: avoid; }
   .nota-header { display: flex; gap: 12px; margin-bottom: 8px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6; padding-bottom: 6px; }
-  .nota-header strong { color: #1e3a8a; }
+  .nota-header strong { color: #0A2540; }
   .soap-bloque { margin-bottom: 6px; }
   .soap-label { font-size: 9px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
   .soap-val { font-size: 11px; color: #111827; margin-top: 2px; }
@@ -45,7 +45,7 @@ const estilosBase = `
   .footer { border-top: 1px solid #e5e7eb; margin-top: 24px; padding-top: 8px; font-size: 9px; color: #9ca3af; text-align: center; }
   .page-break { page-break-after: always; }
   .stat-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; text-align: center; }
-  .stat-num { font-size: 22px; font-weight: 900; color: #1e3a8a; }
+  .stat-num { font-size: 22px; font-weight: 900; color: #0A2540; }
   .stat-label { font-size: 9px; color: #6b7280; text-transform: uppercase; margin-top: 2px; }
   .bitacora-omitida { color: #9ca3af; font-style: italic; text-align: center; padding: 4px 0; font-size: 10px; }
   .portada { text-align: center; padding: 60px 0; }
@@ -62,7 +62,7 @@ function encabezadoHTML(usuarioActual) {
   return `
     <div class="encabezado">
       <div>
-        <h1>Mexpediente</h1>
+        <h1>MedpedienteX</h1>
         <div class="clinica-info">
           <strong>${CLINICA_INFO.nombre}</strong><br>
           ${CLINICA_INFO.direccion}<br>
@@ -256,14 +256,14 @@ export function generarReporteGeneral(pacientesSeleccionados, usuarioActual) {
   const portada = `
     <div class="portada page-break">
       <div style="margin-bottom:32px;">
-        <h1>Mexpediente</h1>
+        <h1>MedpedienteX</h1>
         <div class="clinica-info" style="font-size:12px;margin-top:6px;">
           ${CLINICA_INFO.nombre}<br>
           ${CLINICA_INFO.direccion}<br>
           Tel: ${CLINICA_INFO.telefono} · RFC: ${CLINICA_INFO.rfc}
         </div>
       </div>
-      <div class="subtitulo" style="font-family:Georgia,serif;font-size:18px;font-weight:700;color:#1e3a8a;margin-bottom:16px;">Reporte General de Expedientes Clínicos</div>
+      <div class="subtitulo" style="font-family:Georgia,serif;font-size:18px;font-weight:700;color:#0A2540;margin-bottom:16px;">Reporte General de Expedientes Clínicos</div>
       <div class="noms" style="justify-content:center;margin-bottom:20px;">
         <span class="nom-badge nom-004">NOM-004-SSA3-2012</span>
         <span class="nom-badge nom-024">NOM-024-SSA3-2012</span>

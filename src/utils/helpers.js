@@ -1,5 +1,5 @@
 /**
- * Utilidades generales del sistema Mexpediente
+ * Utilidades generales del sistema MedpedienteX
  * NOM-004-SSA3-2012 / NOM-024-SSA3-2012
  */
 
