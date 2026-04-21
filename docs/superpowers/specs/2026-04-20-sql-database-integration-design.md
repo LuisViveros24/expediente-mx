@@ -10,7 +10,7 @@
 
 MedpedienteX es un sistema de gestión de expedientes clínicos (NOM-004-SSA3-2012 y NOM-024-SSA3-2012) actualmente implementado como una app React+Vite frontend-only sin persistencia. Los datos viven únicamente en memoria (`PACIENTES_MOCK`) y se pierden al recargar la página.
 
-**Objetivo:** Agregar persistencia real con MySQL y autenticación segura mediante JWT, manteniendo los datos bajo control del operador (servidor Hostinger propio) para cumplir con normativa de expedientes médicos en México.
+**Objetivo:** Agregar persistencia real con MySQL y autenticación segura mediante JWT, con arquitectura **multi-tenant** — cada clínica cliente accede por su propio subdominio (`clinica.medpedientex.com.mx`) con datos completamente aislados. El dominio raíz (`medpedientex.com.mx`) es la landing page de ventas.
 
 ---
 
@@ -20,7 +20,7 @@ MedpedienteX es un sistema de gestión de expedientes clínicos (NOM-004-SSA3-20
 
 ```
 expediente-mx/
-├── client/          ← React+Vite (código actual)
+├── client/          ← React+Vite (app de expedientes para clínicas)
 │   ├── src/
 │   │   ├── api/
 │   │   │   └── client.js     ← NUEVO: reemplaza mock.js
@@ -28,12 +28,13 @@ expediente-mx/
 │   │   │   └── mock.js       ← se elimina
 │   │   └── ...resto sin cambios
 │   └── package.json
-├── server/          ← NUEVO: API Express
+├── server/          ← NUEVO: API Express (multi-tenant)
 │   ├── src/
 │   │   ├── index.js
 │   │   ├── db.js             ← conexión MySQL (mysql2)
 │   │   ├── middleware/
-│   │   │   └── auth.js       ← verificarToken JWT
+│   │   │   ├── tenant.js     ← resuelve clínica por subdominio
+│   │   │   └── auth.js       ← verifica JWT + tenant
 │   │   └── routes/
 │   │       ├── auth.js
 │   │       ├── pacientes.js
@@ -41,31 +42,60 @@ expediente-mx/
 │   │       ├── prescripciones.js
 │   │       ├── consentimientos.js
 │   │       ├── bitacora.js
-│   │       └── usuarios.js
+│   │       ├── usuarios.js
+│   │       └── superadmin.js ← gestión de clínicas (solo superadmin)
 │   ├── migrations/
 │   │   └── 001_schema_inicial.sql
 │   └── package.json
+├── landing/         ← NUEVO: página de ventas (medpedientex.com.mx)
+│   └── index.html   ← HTML estático, no requiere build
 └── package.json     ← scripts raíz (dev, build, start)
 ```
 
 ### Diagrama de Despliegue
 
 ```
+medpedientex.com.mx  →  landing/index.html  (página de ventas, HTML estático)
+
+clinicaX.medpedientex.com.mx
+        │
+        ▼
 ┌─────────────────────────────────────────────────┐
 │                  Hostinger VPS                  │
 │                                                 │
 │  ┌──────────────┐      ┌────────────────────┐   │
 │  │  React+Vite  │ HTTP │  Express API       │   │
-│  │  (build      │◄────►│  /api/v1/*         │   │
-│  │  estático)   │      │  Puerto 3001       │   │
-│  └──────────────┘      └────────┬───────────┘   │
+│  │  (build      │◄────►│  middleware:       │   │
+│  │  estático)   │      │  1. tenant.js      │   │
+│  └──────────────┘      │  2. auth.js        │   │
+│                        │  /api/v1/*         │   │
+│                        └────────┬───────────┘   │
 │                                 │               │
 │                        ┌────────▼───────────┐   │
 │                        │  MySQL / MariaDB   │   │
-│                        │  (Hostinger DB)    │   │
+│                        │  (una sola DB,     │   │
+│                        │  datos aislados    │   │
+│                        │  por clinica_id)   │   │
 │                        └────────────────────┘   │
 └─────────────────────────────────────────────────┘
+
+admin.medpedientex.com.mx  →  panel superadmin (tú)
 ```
+
+### Resolución de Tenant por Subdominio
+
+El middleware `tenant.js` extrae el subdominio del hostname en cada request:
+
+```js
+// req.hostname = "clinicaejemplo.medpedientex.com.mx"
+// subdominio   = "clinicaejemplo"
+const subdominio = req.hostname.split('.')[0]
+const clinica = await db.query('SELECT * FROM clinicas WHERE subdominio = ?', [subdominio])
+if (!clinica) return res.status(404).json({ error: 'Clínica no encontrada' })
+req.clinicaId = clinica.id  // disponible en todos los handlers siguientes
+```
+
+Todos los queries de datos llevan automáticamente `WHERE clinica_id = req.clinicaId`.
 
 ---
 
@@ -75,16 +105,32 @@ expediente-mx/
 
 ```sql
 -- Motor InnoDB requerido en todas las tablas para foreign keys reales
+
+-- Clínicas clientes (tenants)
+CREATE TABLE clinicas (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  nombre      VARCHAR(200) NOT NULL,
+  subdominio  VARCHAR(50) NOT NULL UNIQUE,   -- "clinicaejemplo" → clinicaejemplo.medpedientex.com.mx
+  email_admin VARCHAR(100) NOT NULL,
+  telefono    VARCHAR(20),
+  ciudad      VARCHAR(100),
+  plan        ENUM('basico','profesional','clinica') DEFAULT 'basico',
+  activo      BOOLEAN DEFAULT TRUE,
+  creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- Usuarios del sistema
 CREATE TABLE usuarios (
   id            INT AUTO_INCREMENT PRIMARY KEY,
+  clinica_id    INT,                          -- NULL = superadmin (acceso global)
   nombre        VARCHAR(200) NOT NULL,
   email         VARCHAR(100) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   cedula        VARCHAR(20),
-  rol           ENUM('medico','enfermera','recepcion','admin') NOT NULL,
+  rol           ENUM('medico','enfermera','recepcion','admin','superadmin') NOT NULL,
   activo        BOOLEAN DEFAULT TRUE,
-  creado_en     DATETIME DEFAULT CURRENT_TIMESTAMP
+  creado_en     DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (clinica_id) REFERENCES clinicas(id)
 ) ENGINE=InnoDB;
 
 -- Blacklist de tokens revocados (para logout real)
@@ -109,7 +155,8 @@ CREATE TABLE clinica (
 -- Expedientes / pacientes
 CREATE TABLE pacientes (
   id                   INT AUTO_INCREMENT PRIMARY KEY,
-  folio                VARCHAR(20) NOT NULL UNIQUE,
+  clinica_id           INT NOT NULL,
+  folio                VARCHAR(20) NOT NULL,
   fecha_creacion       DATE NOT NULL,
   usuario_creador_id   INT,
   nombre               VARCHAR(200) NOT NULL,
@@ -131,6 +178,8 @@ CREATE TABLE pacientes (
   alergias             TEXT,
   creado_en            DATETIME DEFAULT CURRENT_TIMESTAMP,
   actualizado_en       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY folio_por_clinica (clinica_id, folio),
+  FOREIGN KEY (clinica_id) REFERENCES clinicas(id),
   FOREIGN KEY (usuario_creador_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB;
 
@@ -290,13 +339,24 @@ CREATE TABLE bitacora (
 | GET | `/api/v1/pacientes/:id/bitacora` | medico, admin | Bitácora de un expediente |
 | GET | `/api/v1/bitacora` | admin | Bitácora global (todos los expedientes) — reporte NOM-004/NOM-024 |
 
-### Usuarios (admin)
+### Usuarios (admin de clínica)
 
 | Método | Endpoint | Rol mínimo |
 |--------|----------|-----------|
 | GET | `/api/v1/usuarios` | admin |
 | POST | `/api/v1/usuarios` | admin |
 | PUT | `/api/v1/usuarios/:id` | admin |
+
+### Superadmin — Gestión de Clínicas
+
+Accesible desde `admin.medpedientex.com.mx`. Solo usuarios con `rol = 'superadmin'`.
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/superadmin/clinicas` | Listar todas las clínicas |
+| POST | `/api/v1/superadmin/clinicas` | Crear nueva clínica (alta de cliente) |
+| PUT | `/api/v1/superadmin/clinicas/:id` | Actualizar plan, activar/desactivar |
+| GET | `/api/v1/superadmin/clinicas/:id/usuarios` | Usuarios de una clínica |
 
 ---
 
