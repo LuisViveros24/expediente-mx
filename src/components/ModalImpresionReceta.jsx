@@ -20,24 +20,24 @@ export default function ModalImpresionReceta({ receta, paciente, onCerrar }) {
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Georgia, serif; color: #111; padding: 32px; font-size: 13px; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a8a; padding-bottom: 16px; margin-bottom: 20px; }
-  .clinica-nombre { font-size: 18px; font-weight: 900; color: #1e3a8a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0A2540; padding-bottom: 16px; margin-bottom: 20px; }
+  .clinica-nombre { font-size: 18px; font-weight: 900; color: #0A2540; }
   .clinica-sub { font-size: 11px; color: #6b7280; margin-top: 3px; }
   .folio { text-align: right; }
-  .folio-num { font-family: monospace; font-size: 15px; font-weight: bold; color: #1e3a8a; }
+  .folio-num { font-family: monospace; font-size: 15px; font-weight: bold; color: #0A2540; }
   .folio-sub { font-size: 11px; color: #6b7280; }
   .medico-box { background: #eff6ff; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; }
   .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; display: block; margin-bottom: 2px; }
-  .medico-nombre { font-size: 14px; font-weight: 700; color: #1e3a8a; }
+  .medico-nombre { font-size: 14px; font-weight: 700; color: #0A2540; }
   .medico-cedula { font-size: 11px; color: #6b7280; }
   .paciente-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   .campo-val { font-size: 13px; font-weight: 600; }
   .alergia { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 11px; font-weight: 700; color: #b91c1c; }
   .rx-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .rx-symbol { font-size: 38px; font-weight: 900; color: #1e3a8a; line-height: 1; }
+  .rx-symbol { font-size: 38px; font-weight: 900; color: #0A2540; line-height: 1; }
   .rx-line { flex: 1; height: 1px; background: #bfdbfe; }
-  .med { border-left: 4px solid #1e3a8a; padding: 4px 0 4px 14px; margin-bottom: 18px; }
-  .med-nombre { font-size: 15px; font-weight: 900; color: #1e3a8a; margin-bottom: 5px; }
+  .med { border-left: 4px solid #0A2540; padding: 4px 0 4px 14px; margin-bottom: 18px; }
+  .med-nombre { font-size: 15px; font-weight: 900; color: #0A2540; margin-bottom: 5px; }
   .med-datos { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #374151; }
   .med-ind { font-size: 11px; color: #6b7280; font-style: italic; margin-top: 4px; }
   .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 36px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
@@ -88,15 +88,15 @@ export default function ModalImpresionReceta({ receta, paciente, onCerrar }) {
         <div id={printId} className="p-8 bg-white text-gray-900" style={{ fontFamily: "Georgia, serif" }}>
 
           {/* Encabezado */}
-          <div className="header" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", borderBottom:"3px solid #1e3a8a", paddingBottom:"16px", marginBottom:"20px" }}>
+          <div className="header" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", borderBottom:"3px solid #0A2540", paddingBottom:"16px", marginBottom:"20px" }}>
             <div>
-              <div className="clinica-nombre" style={{ fontSize:"18px", fontWeight:900, color:"#1e3a8a" }}>{CLINICA_INFO.nombre}</div>
+              <div className="clinica-nombre" style={{ fontSize:"18px", fontWeight:900, color:"#0A2540" }}>{CLINICA_INFO.nombre}</div>
               <div className="clinica-sub" style={{ fontSize:"11px", color:"#6b7280", marginTop:"3px" }}>{CLINICA_INFO.direccion}</div>
               <div className="clinica-sub" style={{ fontSize:"11px", color:"#6b7280" }}>Tel: {CLINICA_INFO.telefono} · RFC: {CLINICA_INFO.rfc}</div>
             </div>
             <div style={{ textAlign:"right" }}>
               <p style={{ fontSize:"11px", color:"#6b7280", margin:0 }}>Folio de receta</p>
-              <p style={{ fontFamily:"monospace", fontSize:"15px", fontWeight:"bold", color:"#1e3a8a", margin:0 }}>RX-{receta.id}</p>
+              <p style={{ fontFamily:"monospace", fontSize:"15px", fontWeight:"bold", color:"#0A2540", margin:0 }}>RX-{receta.id}</p>
               <p style={{ fontSize:"11px", color:"#6b7280", margin:0 }}>{receta.fecha}</p>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function ModalImpresionReceta({ receta, paciente, onCerrar }) {
           {/* Médico */}
           <div style={{ background:"#eff6ff", borderRadius:"8px", padding:"10px 14px", marginBottom:"18px" }}>
             <span style={{ fontSize:"9px", textTransform:"uppercase", letterSpacing:"0.08em", color:"#9ca3af", display:"block", marginBottom:"2px" }}>Médico responsable</span>
-            <p style={{ fontSize:"14px", fontWeight:700, color:"#1e3a8a", margin:0 }}>{receta.medico}</p>
+            <p style={{ fontSize:"14px", fontWeight:700, color:"#0A2540", margin:0 }}>{receta.medico}</p>
             <p style={{ fontSize:"11px", color:"#6b7280", margin:0 }}>Cédula Profesional: {receta.cedula}</p>
           </div>
 
@@ -125,14 +125,14 @@ export default function ModalImpresionReceta({ receta, paciente, onCerrar }) {
 
           {/* Símbolo Rx */}
           <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"16px" }}>
-            <span style={{ fontSize:"38px", fontWeight:900, color:"#1e3a8a", lineHeight:1 }}>℞</span>
+            <span style={{ fontSize:"38px", fontWeight:900, color:"#0A2540", lineHeight:1 }}>℞</span>
             <div style={{ flex:1, height:"1px", background:"#bfdbfe" }} />
           </div>
 
           {/* Medicamentos */}
           {receta.medicamentos.map((m, i) => (
-            <div key={i} style={{ borderLeft:"4px solid #1e3a8a", paddingLeft:"14px", marginBottom:"18px" }}>
-              <p style={{ fontSize:"15px", fontWeight:900, color:"#1e3a8a", marginBottom:"5px" }}>{i + 1}. {m.nombre}</p>
+            <div key={i} style={{ borderLeft:"4px solid #0A2540", paddingLeft:"14px", marginBottom:"18px" }}>
+              <p style={{ fontSize:"15px", fontWeight:900, color:"#0A2540", marginBottom:"5px" }}>{i + 1}. {m.nombre}</p>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"12px", fontSize:"12px", color:"#374151" }}>
                 <span><b>Dosis:</b> {m.dosis}</span>
                 <span><b>Vía:</b> {m.via}</span>
@@ -164,7 +164,7 @@ export default function ModalImpresionReceta({ receta, paciente, onCerrar }) {
           {/* Pie */}
           <div style={{ marginTop:"28px", paddingTop:"10px", borderTop:"1px solid #f3f4f6", textAlign:"center" }}>
             <p style={{ fontSize:"9px", color:"#9ca3af", lineHeight:1.6 }}>
-              Documento generado por Mexpediente · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012<br />
+              Documento generado por MedpedienteX · NOM-004-SSA3-2012 §8.7 · NOM-024-SSA3-2012<br />
               Válido únicamente con firma del médico responsable
             </p>
           </div>
