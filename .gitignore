@@ -32,3 +32,9 @@ lerna-debug.log*
 .env
 .env.local
 .env.production
+
+# Monorepo
+server/.env
+server/node_modules
+client/node_modules
+client/dist
