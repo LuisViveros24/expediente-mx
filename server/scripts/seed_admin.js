@@ -1,7 +1,12 @@
 import bcrypt from 'bcryptjs'
-import db from '../src/db.js'
 import dotenv from 'dotenv'
-dotenv.config()
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: resolve(__dirname, '../../.env') })
+
+import db from '../src/db.js'
 
 const email = process.argv[2] || 'admin@medpedientex.com.mx'
 const password = process.argv[3] || 'CambiarEsto123!'
