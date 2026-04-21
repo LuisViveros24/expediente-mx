@@ -9,7 +9,7 @@ const router = Router()
 router.get('/', async (req, res, next) => {
   try {
     const [rows] = await db.query(
-      'SELECT * FROM pacientes WHERE clinica_id = ? ORDER BY creado_en DESC',
+      'SELECT * FROM pacientes WHERE clinica_id = ? AND activo = TRUE ORDER BY creado_en DESC',
       [req.clinicaId]
     )
     res.json(rows)
@@ -20,7 +20,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const [rows] = await db.query(
-      'SELECT * FROM pacientes WHERE id = ? AND clinica_id = ?',
+      'SELECT * FROM pacientes WHERE id = ? AND clinica_id = ? AND activo = TRUE',
       [req.params.id, req.clinicaId]
     )
     if (!rows[0]) return res.status(404).json({ error: 'Paciente no encontrado' })
@@ -100,7 +100,16 @@ router.put('/:id', requireRol('medico','recepcion','admin','superadmin'), async 
 // DELETE /api/v1/pacientes/:id — solo admin
 router.delete('/:id', requireRol('admin','superadmin'), async (req, res, next) => {
   try {
-    await db.query('DELETE FROM pacientes WHERE id = ? AND clinica_id = ?', [req.params.id, req.clinicaId])
+    const [existe] = await db.query(
+      'SELECT id FROM pacientes WHERE id = ? AND clinica_id = ?',
+      [req.params.id, req.clinicaId]
+    )
+    if (!existe[0]) return res.status(404).json({ error: 'Paciente no encontrado' })
+    await db.query(
+      "UPDATE pacientes SET activo = FALSE WHERE id = ? AND clinica_id = ?",
+      [req.params.id, req.clinicaId]
+    )
+    await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ARCHIVAR_EXPEDIENTE', 'NOM-004: registro archivado, no eliminado')
     res.json({ ok: true })
   } catch (err) { next(err) }
 })
@@ -129,6 +138,13 @@ router.put('/:id/historia', requireRol('medico','enfermera','admin','superadmin'
       c === 'exploracion_fisica' ? JSON.stringify(req.body[c]) : req.body[c]
     )
     if (!sets) return res.status(400).json({ error: 'Sin campos' })
+    const [existe] = await db.query(
+      `SELECT h.id FROM historia_clinica h
+       JOIN pacientes p ON p.id = h.paciente_id
+       WHERE h.paciente_id = ? AND p.clinica_id = ?`,
+      [req.params.id, req.clinicaId]
+    )
+    if (!existe[0]) return res.status(404).json({ error: 'Historia clínica no encontrada' })
     await db.query(`UPDATE historia_clinica SET ${sets} WHERE paciente_id = ?`, [...vals, req.params.id])
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ACTUALIZAR_HISTORIA', '')
     res.json({ ok: true })

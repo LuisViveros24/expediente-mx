@@ -61,6 +61,7 @@ CREATE TABLE pacientes (
   contacto_emergencia VARCHAR(200),
   grupo_sanguineo     VARCHAR(5),
   alergias            TEXT,
+  activo              BOOLEAN DEFAULT TRUE,
   creado_en           DATETIME DEFAULT CURRENT_TIMESTAMP,
   actualizado_en      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY folio_por_clinica (clinica_id, folio),

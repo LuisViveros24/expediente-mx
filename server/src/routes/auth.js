@@ -63,16 +63,12 @@ router.post('/login', async (req, res, next) => {
 // POST /api/v1/auth/logout
 router.post('/logout', async (req, res, next) => {
   try {
-    const token = req.cookies?.token
-    if (token) {
-      const payload = jwt.decode(token)
-      if (payload?.jti) {
-        const expiraEn = new Date(payload.exp * 1000)
-        await db.query(
-          'INSERT IGNORE INTO tokens_revocados (jti, usuario_id, expira_en) VALUES (?,?,?)',
-          [payload.jti, payload.id, expiraEn]
-        )
-      }
+    if (req.usuario?.jti) {
+      const expiraEn = new Date(req.usuario.exp * 1000)
+      await db.query(
+        'INSERT IGNORE INTO tokens_revocados (jti, usuario_id, expira_en) VALUES (?,?,?)',
+        [req.usuario.jti, req.usuario.id, expiraEn]
+      )
     }
     res.clearCookie('token')
     res.json({ ok: true })

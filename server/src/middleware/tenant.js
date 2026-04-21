@@ -13,8 +13,12 @@ export async function resolverTenant(req, res, next) {
   const subdominio = partes[0]
 
   if (partes.length < 3 || SUBDOMINIOS_SISTEMA.includes(subdominio)) {
-    req.clinicaId = null
-    return next()
+    // Only allow null-tenant for development or explicit system paths
+    if (process.env.NODE_ENV === 'development') {
+      req.clinicaId = null
+      return next()
+    }
+    return res.status(400).json({ error: 'Subdominio de clínica requerido' })
   }
 
   try {
