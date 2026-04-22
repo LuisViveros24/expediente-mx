@@ -17,8 +17,15 @@ import { verificarToken } from './middleware/auth.js'
 
 const app = express()
 
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map(o => o.trim())
+  : []
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+    cb(new Error('Not allowed by CORS'))
+  },
   credentials: true,
 }))
 app.use(express.json({ limit: '10mb' }))
