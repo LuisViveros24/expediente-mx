@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import * as api from "./api/client.js";
+import { setToken } from "./api/client.js";
 import ModalReporteExpediente from "./components/ModalReporteExpediente";
 import ModalReporteGeneral from "./components/ModalReporteGeneral";
 
@@ -839,6 +840,10 @@ export default function App() {
   const [inicializando, setInicializando] = useState(true);
 
   useEffect(() => {
+    // Restaurar token de sesión anterior si existe
+    const tokenGuardado = sessionStorage.getItem('mx_token');
+    if (tokenGuardado) setToken(tokenGuardado);
+
     api.getMe()
       .then(({ usuario }) => {
         setUsuario(usuario);

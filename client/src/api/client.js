@@ -1,9 +1,9 @@
 const BASE = `${import.meta.env.VITE_API_URL || ''}/api/v1`
 
-// Token en memoria — no se pierde entre requests, no se guarda en localStorage
-let _token = null
-export const setToken = (t) => { _token = t }
-export const clearToken = () => { _token = null }
+// Token en sessionStorage — persiste en la pestaña, se borra al cerrar el navegador
+let _token = sessionStorage.getItem('mx_token') || null
+export const setToken = (t) => { _token = t; if (t) sessionStorage.setItem('mx_token', t); else sessionStorage.removeItem('mx_token') }
+export const clearToken = () => { _token = null; sessionStorage.removeItem('mx_token') }
 
 async function apiFetch(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers }
