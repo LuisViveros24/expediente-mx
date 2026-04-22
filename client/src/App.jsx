@@ -758,7 +758,7 @@ const ListaPacientes = ({ pacientes, onSeleccionar, onNuevo, usuarioActual }) =>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div><h2 className="text-lg font-black text-white">Expedientes Clínicos</h2><p className="text-xs text-slate-500">{pacientes.length} expedientes</p></div>
         <div className="flex items-center gap-2">
-          {(usuarioActual.rol === "medico" || usuarioActual.rol === "recepcion") && (
+          {["medico", "recepcion", "admin", "superadmin"].includes(usuarioActual.rol) && (
             <button onClick={onNuevo} className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all">
               + Nuevo expediente
             </button>
