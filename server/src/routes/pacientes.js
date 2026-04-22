@@ -116,17 +116,27 @@ router.put('/:id', requireRol('medico','recepcion','admin','superadmin'), async 
   } catch (err) { next(err) }
 })
 
-// DELETE /api/v1/pacientes/:id — solo admin
-router.delete('/:id', requireRol('admin','superadmin'), async (req, res, next) => {
+// DELETE /api/v1/pacientes/:id
+// Superadmin: puede archivar cualquier expediente
+// Otros roles: solo pueden archivar sus propios expedientes
+router.delete('/:id', requireRol('medico','recepcion','admin','superadmin'), async (req, res, next) => {
   try {
-    const [existe] = await db.query(
-      'SELECT id FROM pacientes WHERE id = ? AND clinica_id = ?',
-      [req.params.id, req.clinicaId]
-    )
-    if (!existe[0]) return res.status(404).json({ error: 'Paciente no encontrado' })
+    let existe
+    if (req.usuario.rol === 'superadmin') {
+      ;[existe] = await db.query(
+        'SELECT id FROM pacientes WHERE id = ? AND activo = TRUE',
+        [req.params.id]
+      )
+    } else {
+      ;[existe] = await db.query(
+        'SELECT id FROM pacientes WHERE id = ? AND usuario_creador_id = ? AND activo = TRUE',
+        [req.params.id, req.usuario.id]
+      )
+    }
+    if (!existe[0]) return res.status(404).json({ error: 'Expediente no encontrado o sin permiso para archivarlo' })
     await db.query(
-      "UPDATE pacientes SET activo = FALSE WHERE id = ? AND clinica_id = ?",
-      [req.params.id, req.clinicaId]
+      'UPDATE pacientes SET activo = FALSE WHERE id = ?',
+      [req.params.id]
     )
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ARCHIVAR_EXPEDIENTE', 'NOM-004: registro archivado, no eliminado')
     res.json({ ok: true })

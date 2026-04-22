@@ -21,7 +21,60 @@ const calcIMC = (peso, talla) => { const p = parseFloat(peso), t = parseFloat(ta
 const generarFolio = () => `EXP-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 const fechaHoraActual = () => { const n = new Date(); return `${n.toLocaleDateString("es-MX")} ${n.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}`; };
 const calcEdad = (f) => { if (!f) return "—"; const h = new Date(), n = new Date(f); let e = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) e--; return `${e} años`; };
-const PLANTILLA = () => ({ id: "", folio: "", fechaCreacion: new Date().toISOString().split("T")[0], identificacion: { nombre: "", fechaNacimiento: "", sexo: "", curp: "", rfc: "", estadoCivil: "", escolaridad: "", ocupacion: "", nacionalidad: "Mexicana", religion: "", lugarNacimiento: "", domicilio: "", telefono: "", telefonoEmergencia: "", contactoEmergencia: "", grupoSanguineo: "", alergias: "" }, historiaClinica: { motivoConsulta: "", padecimientoActual: "", antecedentesHeredoFamiliares: "", antecedentesPersonalesPatologicos: "", antecedentesPersonalesNoPatologicos: "", antecedentesGinecoObstetricos: "", antecedentesPediatricos: "", exploFisica: { talla: "", peso: "", imc: "", ta: "", fc: "", fr: "", temp: "", sao2: "", notasExploracion: "" } }, notas: [], prescripciones: [], consentimientos: [], bitacora: [] });
+const PLANTILLA = () => ({ id: "", folio: "", fechaCreacion: new Date().toISOString().split("T")[0], usuarioCreadorId: null, identificacion: { nombre: "", fechaNacimiento: "", sexo: "", curp: "", rfc: "", estadoCivil: "", escolaridad: "", ocupacion: "", nacionalidad: "Mexicana", religion: "", lugarNacimiento: "", domicilio: "", telefono: "", telefonoEmergencia: "", contactoEmergencia: "", grupoSanguineo: "", alergias: "" }, historiaClinica: { motivoConsulta: "", padecimientoActual: "", antecedentesHeredoFamiliares: "", antecedentesPersonalesPatologicos: "", antecedentesPersonalesNoPatologicos: "", antecedentesGinecoObstetricos: "", antecedentesPediatricos: "", exploFisica: { talla: "", peso: "", imc: "", ta: "", fc: "", fr: "", temp: "", sao2: "", notasExploracion: "" } }, notas: [], prescripciones: [], consentimientos: [], bitacora: [] });
+
+// Convierte fila plana de MySQL → objeto anidado del frontend
+const fromBackend = (row) => ({
+  id: row.id,
+  folio: row.folio || '',
+  fechaCreacion: row.fecha_creacion || row.fechaCreacion || '',
+  usuarioCreadorId: row.usuario_creador_id ?? row.usuarioCreadorId ?? null,
+  identificacion: {
+    nombre: row.nombre || '',
+    fechaNacimiento: row.fecha_nacimiento || '',
+    sexo: row.sexo || '',
+    curp: row.curp || '',
+    rfc: row.rfc || '',
+    estadoCivil: row.estado_civil || '',
+    escolaridad: row.escolaridad || '',
+    ocupacion: row.ocupacion || '',
+    nacionalidad: row.nacionalidad || 'Mexicana',
+    religion: row.religion || '',
+    lugarNacimiento: row.lugar_nacimiento || '',
+    domicilio: row.domicilio || '',
+    telefono: row.telefono || '',
+    telefonoEmergencia: row.telefono_emergencia || '',
+    contactoEmergencia: row.contacto_emergencia || '',
+    grupoSanguineo: row.grupo_sanguineo || '',
+    alergias: row.alergias || '',
+  },
+  historiaClinica: { motivoConsulta: '', padecimientoActual: '', antecedentesHeredoFamiliares: '', antecedentesPersonalesPatologicos: '', antecedentesPersonalesNoPatologicos: '', antecedentesGinecoObstetricos: '', antecedentesPediatricos: '', exploFisica: { talla: '', peso: '', imc: '', ta: '', fc: '', fr: '', temp: '', sao2: '', notasExploracion: '' } },
+  notas: [],
+  prescripciones: [],
+  consentimientos: [],
+  bitacora: [],
+});
+
+// Convierte identificacion del frontend → campos planos para el backend
+const toBackend = (id) => ({
+  nombre: id.nombre,
+  fecha_nacimiento: id.fechaNacimiento,
+  sexo: id.sexo,
+  curp: id.curp,
+  rfc: id.rfc,
+  estado_civil: id.estadoCivil,
+  escolaridad: id.escolaridad,
+  ocupacion: id.ocupacion,
+  nacionalidad: id.nacionalidad,
+  religion: id.religion,
+  lugar_nacimiento: id.lugarNacimiento,
+  domicilio: id.domicilio,
+  telefono: id.telefono,
+  telefono_emergencia: id.telefonoEmergencia,
+  contacto_emergencia: id.contactoEmergencia,
+  grupo_sanguineo: id.grupoSanguineo,
+  alergias: id.alergias,
+});
 
 // ══════════════════════════════════════════════════════════════════
 // UI PRIMITIVOS
@@ -877,7 +930,7 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
 // ══════════════════════════════════════════════════════════════════
 // LISTA PACIENTES
 // ══════════════════════════════════════════════════════════════════
-const ListaPacientes = ({ pacientes, onSeleccionar, onNuevo, usuarioActual }) => {
+const ListaPacientes = ({ pacientes, onSeleccionar, onNuevo, onBorrar, usuarioActual }) => {
   const [busqueda, setBusqueda] = useState("");
   const filtrados = pacientes.filter(p => p.identificacion.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.folio.toLowerCase().includes(busqueda.toLowerCase()) || p.identificacion.curp.toLowerCase().includes(busqueda.toLowerCase()));
   const puedeCrear = true;
@@ -903,26 +956,40 @@ const ListaPacientes = ({ pacientes, onSeleccionar, onNuevo, usuarioActual }) =>
 
       {filtrados.length === 0 && <div className="text-center py-12 text-slate-600 text-sm">No se encontraron expedientes.</div>}
       <div className="flex flex-col gap-2">
-        {filtrados.map(p => (
-          <button key={p.id} onClick={() => onSeleccionar(p)} className="w-full text-left bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-sky-600/50 rounded-xl p-4 transition-all group">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <p className="font-bold text-white text-sm group-hover:text-sky-300 transition-colors">{p.identificacion.nombre}</p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="text-xs text-slate-500 font-mono">{p.folio}</span>
-                  <span className="text-slate-600">·</span><span className="text-xs text-slate-500">{calcEdad(p.identificacion.fechaNacimiento)}</span>
-                  <span className="text-slate-600">·</span><span className="text-xs text-slate-500">CURP: {p.identificacion.curp || "—"}</span>
+        {filtrados.map(p => {
+          const puedeEliminar = usuarioActual.rol === 'superadmin' || p.usuarioCreadorId === usuarioActual.id;
+          return (
+            <div key={p.id} className="relative group">
+              <button onClick={() => onSeleccionar(p)} className="w-full text-left bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-sky-600/50 rounded-xl p-4 transition-all">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <p className="font-bold text-white text-sm group-hover:text-sky-300 transition-colors">{p.identificacion.nombre}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs text-slate-500 font-mono">{p.folio}</span>
+                      <span className="text-slate-600">·</span><span className="text-xs text-slate-500">{calcEdad(p.identificacion.fechaNacimiento)}</span>
+                      <span className="text-slate-600">·</span><span className="text-xs text-slate-500">CURP: {p.identificacion.curp || "—"}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {p.identificacion.alergias && <Badge label="Alergias" color="red" />}
+                    <Badge label={`${p.notas.length} nota(s)`} color="slate" />
+                    <Badge label={`${p.prescripciones.length} receta(s)`} color="green" />
+                    <span className="text-slate-600 group-hover:text-sky-400 transition-colors">→</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {p.identificacion.alergias && <Badge label="Alergias" color="red" />}
-                <Badge label={`${p.notas.length} nota(s)`} color="slate" />
-                <Badge label={`${p.prescripciones.length} receta(s)`} color="green" />
-                <span className="text-slate-600 group-hover:text-sky-400 transition-colors">→</span>
-              </div>
+              </button>
+              {puedeEliminar && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onBorrar(p); }}
+                  title="Archivar expediente"
+                  className="absolute top-3 right-10 opacity-0 group-hover:opacity-100 transition-opacity bg-red-900/60 hover:bg-red-700 border border-red-700 text-red-300 hover:text-white text-xs px-2 py-1 rounded-lg font-semibold"
+                >
+                  🗑 Archivar
+                </button>
+              )}
             </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -978,7 +1045,7 @@ export default function App() {
         setUsuario(usuario);
         return api.getPacientes();
       })
-      .then(setPacientes)
+      .then(rows => setPacientes(rows.map(fromBackend)))
       .catch(() => {})
       .finally(() => setInicializando(false));
 
@@ -990,7 +1057,7 @@ export default function App() {
   const handleLogin = async (usuarioLogueado) => {
     setUsuario(usuarioLogueado);
     const lista = await api.getPacientes().catch(() => []);
-    setPacientes(lista);
+    setPacientes(lista.map(fromBackend));
     setVista("lista");
   };
 
@@ -1004,9 +1071,20 @@ export default function App() {
 
   const abrirExpediente = p => { setPacienteActivo(p); setVista("expediente"); };
 
+  const borrarExpediente = async (p) => {
+    const nombre = p.identificacion?.nombre || 'este expediente';
+    if (!window.confirm(`¿Archivar el expediente de "${nombre}"?\n\nEl expediente quedará inactivo y no podrá recuperarse desde la app.`)) return;
+    try {
+      await api.deletePaciente(p.id);
+      setPacientes(prev => prev.filter(x => x.id !== p.id));
+    } catch (err) { alert(err.message); }
+  };
+
   const actualizarPaciente = async (p) => {
     try {
-      const actualizado = await api.updatePaciente(p.id, p.identificacion || p);
+      const payload = toBackend(p.identificacion || p);
+      const row = await api.updatePaciente(p.id, payload);
+      const actualizado = fromBackend(row);
       setPacientes(prev => prev.map(x => x.id === actualizado.id ? actualizado : x));
       setPacienteActivo(actualizado);
     } catch (err) { alert(err.message); }
@@ -1036,7 +1114,7 @@ export default function App() {
         grupo_sanguineo: id.grupoSanguineo,
         alergias: id.alergias,
       };
-      const creado = await api.createPaciente(payload);
+      const creado = fromBackend(await api.createPaciente(payload));
       setPacientes(prev => [creado, ...prev]);
       setVista("lista");
     } catch (err) { alert(err.message); }
@@ -1068,7 +1146,7 @@ export default function App() {
 
       {/* Contenido */}
       <div className="flex-1 overflow-y-auto">
-        {vista === "lista" && <ListaPacientes pacientes={pacientes} onSeleccionar={abrirExpediente} onNuevo={() => setVista("nuevo")} usuarioActual={usuario} />}
+        {vista === "lista" && <ListaPacientes pacientes={pacientes} onSeleccionar={abrirExpediente} onNuevo={() => setVista("nuevo")} onBorrar={borrarExpediente} usuarioActual={usuario} />}
         {vista === "expediente" && pacienteActivo && <VistaExpediente paciente={pacienteActivo} setPaciente={actualizarPaciente} usuarioActual={usuario} onVolver={() => setVista("lista")} />}
         {vista === "nuevo" && <NuevoExpediente onGuardar={crearExpediente} onCancelar={() => setVista("lista")} usuarioActual={usuario} />}
         {vista === "acceso" && <div className="p-4 max-w-3xl mx-auto"><ControlAcceso usuarioActual={usuario} /></div>}
