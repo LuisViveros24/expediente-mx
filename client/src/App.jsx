@@ -1014,7 +1014,29 @@ export default function App() {
 
   const crearExpediente = async (nuevo) => {
     try {
-      const creado = await api.createPaciente(nuevo);
+      const id = nuevo.identificacion || nuevo;
+      const payload = {
+        folio: nuevo.folio,
+        fecha_creacion: nuevo.fechaCreacion,
+        nombre: id.nombre,
+        fecha_nacimiento: id.fechaNacimiento,
+        sexo: id.sexo,
+        curp: id.curp,
+        rfc: id.rfc,
+        estado_civil: id.estadoCivil,
+        escolaridad: id.escolaridad,
+        ocupacion: id.ocupacion,
+        nacionalidad: id.nacionalidad,
+        religion: id.religion,
+        lugar_nacimiento: id.lugarNacimiento,
+        domicilio: id.domicilio,
+        telefono: id.telefono,
+        telefono_emergencia: id.telefonoEmergencia,
+        contacto_emergencia: id.contactoEmergencia,
+        grupo_sanguineo: id.grupoSanguineo,
+        alergias: id.alergias,
+      };
+      const creado = await api.createPaciente(payload);
       setPacientes(prev => [creado, ...prev]);
       setVista("lista");
     } catch (err) { alert(err.message); }
