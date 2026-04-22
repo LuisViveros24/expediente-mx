@@ -8,7 +8,8 @@ const RUTAS_PUBLICAS = ['/auth/login']
 export async function verificarToken(req, res, next) {
   if (RUTAS_PUBLICAS.includes(req.path)) return next()
 
-  const token = req.cookies?.token
+  const authHeader = req.headers['authorization']
+  const token = (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null) || req.cookies?.token
   if (!token) return res.status(401).json({ error: 'No autenticado' })
 
   try {

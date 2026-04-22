@@ -49,6 +49,7 @@ router.post('/login', async (req, res, next) => {
     })
 
     res.json({
+      token,
       usuario: {
         id: usuario.id,
         nombre: usuario.nombre,

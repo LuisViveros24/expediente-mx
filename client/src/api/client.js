@@ -1,10 +1,18 @@
 const BASE = `${import.meta.env.VITE_API_URL || ''}/api/v1`
 
+// Token en memoria — no se pierde entre requests, no se guarda en localStorage
+let _token = null
+export const setToken = (t) => { _token = t }
+export const clearToken = () => { _token = null }
+
 async function apiFetch(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  if (_token) headers['Authorization'] = `Bearer ${_token}`
+
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   })
 
@@ -20,10 +28,16 @@ async function apiFetch(path, options = {}) {
 }
 
 // Auth
-export const login = (email, password) =>
-  apiFetch('/auth/login', { method: 'POST', body: { email, password } })
-export const logout = () =>
-  apiFetch('/auth/logout', { method: 'POST' })
+export const login = async (email, password) => {
+  const data = await apiFetch('/auth/login', { method: 'POST', body: { email, password } })
+  if (data.token) setToken(data.token)
+  return data
+}
+export const logout = async () => {
+  const res = await apiFetch('/auth/logout', { method: 'POST' })
+  clearToken()
+  return res
+}
 export const getMe = () => apiFetch('/auth/me')
 
 // Pacientes
