@@ -13,8 +13,16 @@ export async function resolverTenant(req, res, next) {
 
   const hostname = req.hostname
 
+  // Dominio de producción donde viven las clínicas
+  const DOMINIO_PRODUCCION = process.env.PRODUCTION_DOMAIN || 'medpedientex.com.mx'
+
   // Si el request llega directamente al servidor API (no vía subdominio de clínica)
-  if (process.env.NODE_ENV === 'development' || API_HOSTNAMES.includes(hostname)) {
+  // o si es un hostname conocido del sistema, permitir sin tenant
+  if (
+    process.env.NODE_ENV === 'development' ||
+    API_HOSTNAMES.includes(hostname) ||
+    !hostname.endsWith(DOMINIO_PRODUCCION)
+  ) {
     req.clinicaId = null
     return next()
   }
@@ -22,7 +30,7 @@ export async function resolverTenant(req, res, next) {
   const partes = hostname.split('.')
   const subdominio = partes[0]
 
-  if (partes.length < 3 || SUBDOMINIOS_SISTEMA.includes(subdominio)) {
+  if (SUBDOMINIOS_SISTEMA.includes(subdominio)) {
     return res.status(400).json({ error: 'Subdominio de clínica requerido' })
   }
 
