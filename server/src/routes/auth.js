@@ -10,11 +10,12 @@ const router = Router()
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body
-    if (!email || !password) return res.status(400).json({ error: 'Email y password requeridos' })
+    if (!email || !password) return res.status(400).json({ error: 'Credencial y contraseña requeridos' })
 
+    // Permite login por email O por cédula profesional
     const [rows] = await db.query(
-      'SELECT * FROM usuarios WHERE email = ? AND activo = TRUE',
-      [email]
+      'SELECT * FROM usuarios WHERE (email = ? OR cedula = ?) AND activo = TRUE',
+      [email, email]
     )
     const usuario = rows[0]
     if (!usuario) return res.status(401).json({ error: 'Credenciales incorrectas' })

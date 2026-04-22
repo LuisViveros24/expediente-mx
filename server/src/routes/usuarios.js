@@ -19,14 +19,16 @@ router.get('/', requireRol('admin','superadmin'), async (req, res, next) => {
 // POST /api/v1/usuarios
 router.post('/', requireRol('admin','superadmin'), async (req, res, next) => {
   try {
-    const { nombre, email, password, cedula, rol } = req.body
-    if (!nombre || !email || !password || !rol) {
-      return res.status(400).json({ error: 'nombre, email, password y rol son requeridos' })
+    const { nombre, password, cedula, rol, email } = req.body
+    if (!nombre || !password || !cedula || !rol) {
+      return res.status(400).json({ error: 'nombre, cédula, contraseña y rol son requeridos' })
     }
     const hash = await bcrypt.hash(password, 12)
+    // Email es opcional — si no se proporciona se deja null
+    const emailFinal = email || null
     const [result] = await db.query(
       'INSERT INTO usuarios (clinica_id, nombre, email, password_hash, cedula, rol) VALUES (?,?,?,?,?,?)',
-      [req.clinicaId, nombre, email, hash, cedula||null, rol]
+      [req.clinicaId, nombre, emailFinal, hash, cedula, rol]
     )
     res.status(201).json({ id: result.insertId })
   } catch (err) { next(err) }
