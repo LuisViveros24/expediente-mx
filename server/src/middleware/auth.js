@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken'
 import db from '../db.js'
 
+// IMPORTANTE: req.path dentro de un router montado en '/api/v1' es relativo
+// al prefijo — ej: req.path = '/auth/login' (NO '/api/v1/auth/login')
 const RUTAS_PUBLICAS = ['/auth/login']
 
 export async function verificarToken(req, res, next) {
@@ -12,8 +14,8 @@ export async function verificarToken(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET)
 
-    const { rows } = await db.query(
-      'SELECT id FROM tokens_revocados WHERE jti = $1',
+    const [rows] = await db.query(
+      'SELECT id FROM tokens_revocados WHERE jti = ?',
       [payload.jti]
     )
     if (rows.length > 0) return res.status(401).json({ error: 'Sesión expirada' })

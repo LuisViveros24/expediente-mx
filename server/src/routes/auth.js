@@ -6,13 +6,14 @@ import db from '../db.js'
 
 const router = Router()
 
+// POST /api/v1/auth/login
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ error: 'Email y password requeridos' })
 
-    const { rows } = await db.query(
-      'SELECT * FROM usuarios WHERE email = $1 AND activo = TRUE',
+    const [rows] = await db.query(
+      'SELECT * FROM usuarios WHERE email = ? AND activo = TRUE',
       [email]
     )
     const usuario = rows[0]
@@ -27,8 +28,15 @@ router.post('/login', async (req, res, next) => {
 
     const jti = uuidv4()
     const token = jwt.sign(
-      { jti, id: usuario.id, nombre: usuario.nombre, email: usuario.email,
-        rol: usuario.rol, cedula: usuario.cedula, clinicaId: usuario.clinica_id },
+      {
+        jti,
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+        cedula: usuario.cedula,
+        clinicaId: usuario.clinica_id,
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     )
@@ -40,16 +48,25 @@ router.post('/login', async (req, res, next) => {
       maxAge: 8 * 60 * 60 * 1000,
     })
 
-    res.json({ usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol, cedula: usuario.cedula } })
+    res.json({
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+        cedula: usuario.cedula,
+      }
+    })
   } catch (err) { next(err) }
 })
 
+// POST /api/v1/auth/logout
 router.post('/logout', async (req, res, next) => {
   try {
     if (req.usuario?.jti) {
       const expiraEn = new Date(req.usuario.exp * 1000)
       await db.query(
-        'INSERT INTO tokens_revocados (jti, usuario_id, expira_en) VALUES ($1,$2,$3) ON CONFLICT (jti) DO NOTHING',
+        'INSERT IGNORE INTO tokens_revocados (jti, usuario_id, expira_en) VALUES (?,?,?)',
         [req.usuario.jti, req.usuario.id, expiraEn]
       )
     }
@@ -58,6 +75,7 @@ router.post('/logout', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// GET /api/v1/auth/me
 router.get('/me', (req, res) => {
   if (!req.usuario) return res.status(401).json({ error: 'No autenticado' })
   res.json({ usuario: req.usuario })
