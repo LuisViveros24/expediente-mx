@@ -9,9 +9,14 @@ const router = Router()
 router.get('/', requireRol('admin','superadmin'), async (req, res, next) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nombre, email, cedula, rol, activo, creado_en FROM usuarios WHERE clinica_id = ?',
+      'SELECT id, nombre, email, cedula, rol, activo, limite_expedientes, creado_en FROM usuarios WHERE clinica_id = ?',
       [req.clinicaId]
     )
+    // Agregar conteo de expedientes por usuario
+    for (const u of rows) {
+      const [cnt] = await db.query('SELECT COUNT(*) as total FROM pacientes WHERE usuario_creador_id = ? AND activo = TRUE', [u.id])
+      u.total_expedientes = cnt[0].total
+    }
     res.json(rows)
   } catch (err) { next(err) }
 })
@@ -37,13 +42,14 @@ router.post('/', requireRol('admin','superadmin'), async (req, res, next) => {
 // PUT /api/v1/usuarios/:id
 router.put('/:id', requireRol('admin','superadmin'), async (req, res, next) => {
   try {
-    const { nombre, cedula, rol, activo, password } = req.body
+    const { nombre, cedula, rol, activo, password, limite_expedientes } = req.body
     const updates = []
     const vals = []
     if (nombre !== undefined) { updates.push('nombre = ?'); vals.push(nombre) }
     if (cedula !== undefined) { updates.push('cedula = ?'); vals.push(cedula) }
     if (rol !== undefined) { updates.push('rol = ?'); vals.push(rol) }
     if (activo !== undefined) { updates.push('activo = ?'); vals.push(activo) }
+    if (limite_expedientes !== undefined) { updates.push('limite_expedientes = ?'); vals.push(limite_expedientes === '' ? null : Number(limite_expedientes)) }
     if (password) {
       const hash = await bcrypt.hash(password, 12)
       updates.push('password_hash = ?'); vals.push(hash)

@@ -5,13 +5,20 @@ import { registrar } from '../utils/bitacora.js'
 
 const router = Router()
 
-// GET /api/v1/pacientes — listar todos de la clínica
+// GET /api/v1/pacientes — superadmin ve todos, cada usuario ve solo los suyos
 router.get('/', async (req, res, next) => {
   try {
-    const [rows] = await db.query(
-      'SELECT * FROM pacientes WHERE clinica_id = ? AND activo = TRUE ORDER BY creado_en DESC',
-      [req.clinicaId]
-    )
+    let rows
+    if (req.usuario.rol === 'superadmin') {
+      // Superadmin ve todos sin filtro de clinica
+      ;[rows] = await db.query('SELECT * FROM pacientes WHERE activo = TRUE ORDER BY creado_en DESC')
+    } else {
+      // Cada usuario ve únicamente sus propios expedientes
+      ;[rows] = await db.query(
+        'SELECT * FROM pacientes WHERE usuario_creador_id = ? AND activo = TRUE ORDER BY creado_en DESC',
+        [req.usuario.id]
+      )
+    }
     res.json(rows)
   } catch (err) { next(err) }
 })
@@ -34,6 +41,18 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
     const { folio, fecha_creacion, nombre, fecha_nacimiento, sexo, ...resto } = req.body
     if (!nombre || !fecha_nacimiento || !sexo) {
       return res.status(400).json({ error: 'nombre, fecha_nacimiento y sexo son requeridos' })
+    }
+
+    // Verificar límite de expedientes del usuario
+    if (req.usuario.rol !== 'superadmin') {
+      const [uRows] = await db.query('SELECT limite_expedientes FROM usuarios WHERE id = ?', [req.usuario.id])
+      const limite = uRows[0]?.limite_expedientes
+      if (limite !== null && limite !== undefined) {
+        const [cnt] = await db.query('SELECT COUNT(*) as total FROM pacientes WHERE usuario_creador_id = ? AND activo = TRUE', [req.usuario.id])
+        if (cnt[0].total >= limite) {
+          return res.status(403).json({ error: `Límite de expedientes alcanzado (${limite}). Contacta al administrador.` })
+        }
+      }
     }
 
     const [result] = await db.query(

@@ -312,7 +312,15 @@ const RegistroPaciente = ({ paciente, onChange, soloLectura }) => {
           <Campo label="Estado civil" value={id.estadoCivil} onChange={v => set("estadoCivil", v)} options={[{ value: "soltero", label: "Soltero/a" }, { value: "casado", label: "Casado/a" }, { value: "divorciado", label: "Divorciado/a" }, { value: "viudo", label: "Viudo/a" }, { value: "union_libre", label: "Unión libre" }]} readOnly={soloLectura} />
           <Campo label="Escolaridad" value={id.escolaridad} onChange={v => set("escolaridad", v)} options={[{ value: "ninguna", label: "Ninguna" }, { value: "primaria", label: "Primaria" }, { value: "secundaria", label: "Secundaria" }, { value: "preparatoria", label: "Preparatoria" }, { value: "tecnico", label: "Técnico" }, { value: "licenciatura", label: "Licenciatura" }, { value: "posgrado", label: "Posgrado" }]} readOnly={soloLectura} />
           <Campo label="Ocupación" value={id.ocupacion} onChange={v => set("ocupacion", v)} readOnly={soloLectura} />
-          <Campo label="Grupo sanguíneo" value={id.grupoSanguineo} onChange={v => set("grupoSanguineo", v)} options={[{ value: "A+", label: "A+" }, { value: "A-", label: "A-" }, { value: "B+", label: "B+" }, { value: "B-", label: "B-" }, { value: "AB+", label: "AB+" }, { value: "AB-", label: "AB-" }, { value: "O+", label: "O+" }, { value: "O-", label: "O-" }]} readOnly={soloLectura} />
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Grupo sanguíneo</label>
+            <select value={id.grupoSanguineo} onChange={e => set("grupoSanguineo", e.target.value)} disabled={soloLectura}
+              className={`bg-slate-800 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sky-500 ${id.grupoSanguineo === "Desconocido" ? "border-red-500 text-red-400 font-bold" : "border-slate-600 text-slate-100"}`}>
+              <option value="">— Seleccionar —</option>
+              {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(g => <option key={g} value={g}>{g}</option>)}
+              <option value="Desconocido">⚠ Desconocido</option>
+            </select>
+          </div>
           <Campo label="Domicilio completo" value={id.domicilio} onChange={v => set("domicilio", v)} required readOnly={soloLectura} className="sm:col-span-2" />
           <Campo label="Teléfono" type="tel" value={id.telefono} onChange={v => set("telefono", v)} readOnly={soloLectura} />
           <Campo label="Contacto de emergencia" value={id.contactoEmergencia} onChange={v => set("contactoEmergencia", v)} readOnly={soloLectura} />
@@ -693,7 +701,9 @@ const GestionUsuarios = ({ usuarioActual }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [form, setForm] = useState({ nombre: "", cedula: "", password: "", rol: "medico" });
+  const [form, setForm] = useState({ nombre: "", cedula: "", password: "", rol: "medico", limite_expedientes: "" });
+  const [editandoLimite, setEditandoLimite] = useState(null); // id del usuario editando límite
+  const [nuevoLimite, setNuevoLimite] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
 
@@ -710,12 +720,18 @@ const GestionUsuarios = ({ usuarioActual }) => {
     if (!form.nombre || !form.cedula || !form.password) { setError("Nombre, cédula y contraseña son requeridos"); return; }
     setGuardando(true); setError("");
     try {
-      await api.createUsuario(form);
-      setForm({ nombre: "", cedula: "", password: "", rol: "medico" });
+      await api.createUsuario({ ...form, limite_expedientes: form.limite_expedientes === "" ? null : Number(form.limite_expedientes) });
+      setForm({ nombre: "", cedula: "", password: "", rol: "medico", limite_expedientes: "" });
       setMostrarForm(false);
       await cargar();
     } catch (err) { setError(err.message); }
     finally { setGuardando(false); }
+  };
+
+  const guardarLimite = async (id) => {
+    await api.updateUsuario(id, { limite_expedientes: nuevoLimite === "" ? null : Number(nuevoLimite) }).catch(() => {});
+    setEditandoLimite(null);
+    await cargar();
   };
 
   const toggleActivo = async (u) => {
@@ -741,6 +757,10 @@ const GestionUsuarios = ({ usuarioActual }) => {
           <Campo label="Cédula profesional" value={form.cedula} onChange={v => setForm(f => ({...f, cedula: v}))} required />
           <Campo label="Contraseña" type="password" value={form.password} onChange={v => setForm(f => ({...f, password: v}))} required />
           <Campo label="Rol" value={form.rol} onChange={v => setForm(f => ({...f, rol: v}))} options={ROLES_OPCIONES} />
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Límite de expedientes <span className="normal-case text-slate-600">(vacío = ilimitado)</span></label>
+            <input type="number" min="1" value={form.limite_expedientes} onChange={e => setForm(f => ({...f, limite_expedientes: e.target.value}))} placeholder="Ej: 50" className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500" />
+          </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
           <button onClick={crear} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-bold py-2 rounded-lg text-sm">
             {guardando ? "Guardando..." : "Crear usuario"}
@@ -753,15 +773,31 @@ const GestionUsuarios = ({ usuarioActual }) => {
       ) : (
         <div className="flex flex-col gap-2">
           {usuarios.map(u => (
-            <div key={u.id} className="flex items-center justify-between bg-slate-800/40 rounded-lg px-3 py-2.5">
-              <div>
-                <p className="text-sm font-semibold text-white">{u.nombre}</p>
-                <p className="text-[11px] text-slate-500 font-mono">Cédula: {u.cedula || "—"} · {ROLES_LABELS[u.rol] || u.rol}</p>
+            <div key={u.id} className="bg-slate-800/40 rounded-lg px-3 py-2.5 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">{u.nombre}</p>
+                  <p className="text-[11px] text-slate-500 font-mono">Cédula: {u.cedula || "—"} · {ROLES_LABELS[u.rol] || u.rol}</p>
+                </div>
+                {["admin","superadmin"].includes(usuarioActual.rol) && u.id !== usuarioActual.id && (
+                  <button onClick={() => toggleActivo(u)} className={`text-xs font-bold px-2.5 py-1 rounded-lg ${u.activo ? "text-red-400 hover:bg-red-900/30" : "text-emerald-400 hover:bg-emerald-900/30"}`}>
+                    {u.activo ? "Desactivar" : "Activar"}
+                  </button>
+                )}
               </div>
-              {["admin","superadmin"].includes(usuarioActual.rol) && u.id !== usuarioActual.id && (
-                <button onClick={() => toggleActivo(u)} className={`text-xs font-bold px-2.5 py-1 rounded-lg ${u.activo ? "text-red-400 hover:bg-red-900/30" : "text-emerald-400 hover:bg-emerald-900/30"}`}>
-                  {u.activo ? "Desactivar" : "Activar"}
-                </button>
+              {["admin","superadmin"].includes(usuarioActual.rol) && (
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-slate-500">Expedientes: <span className="text-slate-300 font-mono">{u.total_expedientes}</span> / <span className={u.limite_expedientes ? "text-amber-400 font-mono" : "text-slate-500"}>{u.limite_expedientes ?? "∞"}</span></span>
+                  {editandoLimite === u.id ? (
+                    <div className="flex items-center gap-1 ml-auto">
+                      <input type="number" min="1" value={nuevoLimite} onChange={e => setNuevoLimite(e.target.value)} placeholder="vacío=∞" className="w-20 bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none" />
+                      <button onClick={() => guardarLimite(u.id)} className="text-emerald-400 font-bold px-1.5">✓</button>
+                      <button onClick={() => setEditandoLimite(null)} className="text-slate-500 px-1">✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setEditandoLimite(u.id); setNuevoLimite(u.limite_expedientes ?? ""); }} className="ml-auto text-sky-400 hover:text-sky-300">✏ Cambiar límite</button>
+                  )}
+                </div>
               )}
             </div>
           ))}
