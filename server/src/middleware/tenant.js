@@ -22,8 +22,8 @@ export async function resolverTenant(req, res, next) {
   }
 
   try {
-    const [rows] = await db.query(
-      'SELECT id, activo FROM clinicas WHERE subdominio = ?',
+    const { rows } = await db.query(
+      'SELECT id, activo FROM clinicas WHERE subdominio = $1',
       [subdominio]
     )
     const clinica = rows[0]
