@@ -1430,7 +1430,9 @@ export default function App() {
     if (!window.confirm(`¿Archivar el expediente de "${nombre}"?\n\nEl expediente quedará inactivo y no podrá recuperarse desde la app.`)) return;
     try {
       await api.deletePaciente(p.id);
-      setPacientes(prev => prev.filter(x => x.id !== p.id));
+      // Refrescar lista completa para reflejar la renumeración de folios
+      const lista = await api.getPacientes();
+      setPacientes(lista.map(fromBackend));
     } catch (err) { alert(err.message); }
   };
 

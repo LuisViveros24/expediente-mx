@@ -162,8 +162,30 @@ router.delete('/:id', requireRol('medico','recepcion','admin','superadmin'), asy
       )
     }
     if (!existe[0]) return res.status(404).json({ error: 'Expediente no encontrado o sin permiso para archivarlo' })
+
+    // Obtener el folio para saber el año antes de archivar
+    const [folioRow] = await db.query('SELECT folio FROM pacientes WHERE id = ?', [req.params.id])
+    const folio = folioRow[0]?.folio || ''
+    const yearMatch = folio.match(/^EXP-(\d{4})-/)
+
     await db.query('UPDATE pacientes SET activo = FALSE WHERE id = ?', [req.params.id])
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ARCHIVAR_EXPEDIENTE', 'NOM-004: registro archivado, no eliminado')
+
+    // Renumerar todos los expedientes activos del año en orden para cerrar el hueco
+    if (yearMatch) {
+      const year = yearMatch[1]
+      const [activos] = await db.query(
+        `SELECT id FROM pacientes
+         WHERE folio LIKE ? AND activo = TRUE
+         ORDER BY CAST(SUBSTRING_INDEX(folio, '-', -1) AS UNSIGNED) ASC`,
+        [`EXP-${year}-%`]
+      )
+      for (let i = 0; i < activos.length; i++) {
+        const nuevoFolio = `EXP-${year}-${String(i + 1).padStart(6, '0')}`
+        await db.query('UPDATE pacientes SET folio = ? WHERE id = ?', [nuevoFolio, activos[i].id])
+      }
+    }
+
     res.json({ ok: true })
   } catch (err) { next(err) }
 })
