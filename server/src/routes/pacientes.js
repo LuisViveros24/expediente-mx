@@ -158,12 +158,11 @@ router.delete('/:id', requireRol('medico','recepcion','admin','superadmin'), asy
 // GET /api/v1/pacientes/:id/historia
 router.get('/:id/historia', async (req, res, next) => {
   try {
-    const cf = cFiltro(req.clinicaId)
+    // Garantizar existencia del registro (pacientes pre-migración pueden no tenerlo)
+    await db.query('INSERT IGNORE INTO historia_clinica (paciente_id) VALUES (?)', [req.params.id])
     const [rows] = await db.query(
-      `SELECT h.* FROM historia_clinica h
-       JOIN pacientes p ON p.id = h.paciente_id
-       WHERE h.paciente_id = ? AND ${cf.sql}`,
-      [req.params.id, ...cf.params]
+      'SELECT * FROM historia_clinica WHERE paciente_id = ?',
+      [req.params.id]
     )
     res.json(rows[0] || {})
   } catch (err) { next(err) }
@@ -181,14 +180,11 @@ router.put('/:id/historia', requireRol('medico','enfermera','admin','superadmin'
     )
     if (!sets) return res.status(400).json({ error: 'Sin campos' })
 
-    const cf = cFiltro(req.clinicaId)
-    const [existe] = await db.query(
-      `SELECT h.id FROM historia_clinica h
-       JOIN pacientes p ON p.id = h.paciente_id
-       WHERE h.paciente_id = ? AND ${cf.sql}`,
-      [req.params.id, ...cf.params]
+    // Garantizar que el registro exista (pacientes creados antes de la migración pueden no tenerlo)
+    await db.query(
+      'INSERT IGNORE INTO historia_clinica (paciente_id) VALUES (?)',
+      [req.params.id]
     )
-    if (!existe[0]) return res.status(404).json({ error: 'Historia clínica no encontrada' })
     await db.query(`UPDATE historia_clinica SET ${sets} WHERE paciente_id = ?`, [...vals, req.params.id])
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ACTUALIZAR_HISTORIA', '')
     res.json({ ok: true })
