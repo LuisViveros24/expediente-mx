@@ -38,7 +38,7 @@ router.get('/:id', async (req, res, next) => {
 // POST /api/v1/pacientes — crear expediente
 router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (req, res, next) => {
   try {
-    const { folio, fecha_creacion, nombre, fecha_nacimiento, sexo, ...resto } = req.body
+    const { fecha_creacion, nombre, fecha_nacimiento, sexo, ...resto } = req.body
     if (!nombre || !fecha_nacimiento || !sexo) {
       return res.status(400).json({ error: 'nombre, fecha_nacimiento y sexo son requeridos' })
     }
@@ -55,6 +55,7 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
       }
     }
 
+    // Insertar con folio temporal — se actualiza con el insertId para garantizar unicidad
     const [result] = await db.query(
       `INSERT INTO pacientes
         (clinica_id, folio, fecha_creacion, usuario_creador_id,
@@ -65,7 +66,7 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
          grupo_sanguineo, alergias)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        req.clinicaId, folio, fecha_creacion || new Date().toISOString().split('T')[0],
+        req.clinicaId, 'TEMP', fecha_creacion || new Date().toISOString().split('T')[0],
         req.usuario.id, nombre, fecha_nacimiento, sexo,
         resto.curp||null, resto.rfc||null, resto.estado_civil||null,
         resto.escolaridad||null, resto.ocupacion||null, resto.nacionalidad||null,
@@ -77,8 +78,12 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
 
     const pacienteId = result.insertId
 
+    // Folio único basado en el ID autoincremental: EXP-YYYY-000123
+    const folioFinal = `EXP-${new Date().getFullYear()}-${String(pacienteId).padStart(6, '0')}`
+    await db.query('UPDATE pacientes SET folio = ? WHERE id = ?', [folioFinal, pacienteId])
+
     await db.query('INSERT INTO historia_clinica (paciente_id) VALUES (?)', [pacienteId])
-    await registrar(req.clinicaId, req.usuario.id, pacienteId, 'CREAR_EXPEDIENTE', `Folio: ${folio}`)
+    await registrar(req.clinicaId, req.usuario.id, pacienteId, 'CREAR_EXPEDIENTE', `Folio: ${folioFinal}`)
 
     const [nuevo] = await db.query('SELECT * FROM pacientes WHERE id = ?', [pacienteId])
     res.status(201).json(nuevo[0])

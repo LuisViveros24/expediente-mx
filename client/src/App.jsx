@@ -23,6 +23,73 @@ const fechaHoraActual = () => { const n = new Date(); return `${n.toLocaleDateSt
 const calcEdad = (f) => { if (!f) return "—"; const h = new Date(), n = new Date(f); let e = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) e--; return `${e} años`; };
 const PLANTILLA = () => ({ id: "", folio: "", fechaCreacion: new Date().toISOString().split("T")[0], usuarioCreadorId: null, identificacion: { nombre: "", fechaNacimiento: "", sexo: "", curp: "", rfc: "", estadoCivil: "", escolaridad: "", ocupacion: "", nacionalidad: "Mexicana", religion: "", lugarNacimiento: "", domicilio: "", telefono: "", telefonoEmergencia: "", contactoEmergencia: "", grupoSanguineo: "", alergias: "" }, historiaClinica: { motivoConsulta: "", padecimientoActual: "", antecedentesHeredoFamiliares: "", antecedentesPersonalesPatologicos: "", antecedentesPersonalesNoPatologicos: "", antecedentesGinecoObstetricos: "", antecedentesPediatricos: "", exploFisica: { talla: "", peso: "", imc: "", ta: "", fc: "", fr: "", temp: "", sao2: "", notasExploracion: "" } }, notas: [], prescripciones: [], consentimientos: [], bitacora: [] });
 
+// ── Mapeo backend → frontend ──────────────────────────────────────
+
+const fromHistoriaBackend = (h) => {
+  let exploFisica = { talla: '', peso: '', imc: '', ta: '', fc: '', fr: '', temp: '', sao2: '', notasExploracion: '' };
+  try {
+    if (h.exploracion_fisica) {
+      const p = typeof h.exploracion_fisica === 'string' ? JSON.parse(h.exploracion_fisica) : h.exploracion_fisica;
+      exploFisica = { ...exploFisica, ...p };
+    }
+  } catch {}
+  return {
+    motivoConsulta: h.motivo_consulta || '',
+    padecimientoActual: h.padecimiento_actual || '',
+    antecedentesHeredoFamiliares: h.antecedentes_heredofamiliares || '',
+    antecedentesPersonalesPatologicos: h.antecedentes_personales_patologicos || '',
+    antecedentesPersonalesNoPatologicos: h.antecedentes_personales_no_patologicos || '',
+    antecedentesGinecoObstetricos: h.antecedentes_ginecoobstetricos || '',
+    antecedentesPediatricos: h.antecedentes_pediatricos || '',
+    exploFisica,
+  };
+};
+
+const fromNotaBackend = (n) => ({
+  id: n.id,
+  fecha: n.fecha ? new Date(n.fecha).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '',
+  autor: n.autor_nombre || '',
+  cedula: n.autor_cedula || '',
+  tipo: n.tipo || 'evolucion',
+  subjetivo: n.subjetivo || '',
+  objetivo: n.objetivo || '',
+  analisis: n.analisis || '',
+  plan: n.plan || '',
+  firmado: true,
+  firmaDigital: null,
+  firmaPaciente: null,
+});
+
+const fromRxBackend = (rx) => ({
+  id: rx.id,
+  fecha: rx.fecha ? new Date(rx.fecha).toLocaleDateString('es-MX') : '',
+  medico: rx.medico_nombre || '',
+  cedula: rx.medico_cedula || '',
+  medicamentos: Array.isArray(rx.medicamentos) ? rx.medicamentos : [],
+  firmada: true,
+  firmaDigital: rx.firma_digital || null,
+  firmaPaciente: rx.firma_paciente || null,
+});
+
+const fromConsentBackend = (c) => ({
+  id: c.id,
+  fecha: c.fecha ? new Date(c.fecha).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '',
+  tipo: c.tipo || '',
+  texto: c.texto || '',
+  testigo: c.testigo || '',
+  firmado: !!c.firmado,
+  firmaDigital: c.firma_digital || null,
+  firmaMedico: c.firma_medico || null,
+});
+
+const fromBitacoraBackend = (b) => ({
+  id: b.id,
+  fecha: b.fecha ? new Date(b.fecha).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '',
+  usuario: b.usuario_nombre || '',
+  accion: b.accion || '',
+  detalle: b.detalle || '',
+});
+
 // Convierte fila plana de MySQL → objeto anidado del frontend
 const fromBackend = (row) => ({
   id: row.id,
@@ -424,13 +491,18 @@ const HistoriaClinica = ({ paciente, onChange, soloLectura }) => {
 // ══════════════════════════════════════════════════════════════════
 // MÓDULO: NOTAS SOAP
 // ══════════════════════════════════════════════════════════════════
-const NotasEvolucion = ({ paciente, onChange, usuarioActual }) => {
+const NotasEvolucion = ({ paciente, onChange, onAgregar, usuarioActual }) => {
   const [modal, setModal] = useState(false);
   const [nota, setNota] = useState({ subjetivo: "", objetivo: "", analisis: "", plan: "" });
-  const agregar = () => {
-    const n = { id: Date.now(), fecha: fechaHoraActual(), autor: usuarioActual.nombre, cedula: usuarioActual.cedula, tipo: "evolucion", ...nota, firmado: true };
-    onChange({ ...paciente, notas: [...paciente.notas, n], bitacora: [...paciente.bitacora, { fecha: fechaHoraActual(), usuario: usuarioActual.nombre, accion: "AGREGAR_NOTA", detalle: `Nota SOAP #${n.id}` }] });
-    setNota({ subjetivo: "", objetivo: "", analisis: "", plan: "" }); setModal(false);
+  const [guardando, setGuardando] = useState(false);
+  const agregar = async () => {
+    setGuardando(true);
+    try {
+      await onAgregar(nota);
+      setNota({ subjetivo: "", objetivo: "", analisis: "", plan: "" });
+      setModal(false);
+    } catch (err) { alert(err.message); }
+    finally { setGuardando(false); }
   };
   return (
     <div>
@@ -465,7 +537,7 @@ const NotasEvolucion = ({ paciente, onChange, usuarioActual }) => {
               <Campo label="A — Análisis / Diagnóstico" value={nota.analisis} onChange={v => setNota({ ...nota, analisis: v })} rows={2} required />
               <Campo label="P — Plan" value={nota.plan} onChange={v => setNota({ ...nota, plan: v })} rows={3} required />
               <div className="flex gap-2 pt-2">
-                <button onClick={agregar} className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm">Firmar y guardar</button>
+                <button onClick={agregar} disabled={guardando} className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm">{guardando ? "Guardando…" : "Firmar y guardar"}</button>
                 <button onClick={() => setModal(false)} className="px-4 bg-slate-800 text-slate-300 rounded-xl text-sm">Cancelar</button>
               </div>
             </div>
@@ -479,19 +551,24 @@ const NotasEvolucion = ({ paciente, onChange, usuarioActual }) => {
 // ══════════════════════════════════════════════════════════════════
 // MÓDULO: PRESCRIPCIONES (firma digital + impresión)
 // ══════════════════════════════════════════════════════════════════
-const Prescripciones = ({ paciente, onChange, usuarioActual }) => {
+const Prescripciones = ({ paciente, onChange, onAgregar, usuarioActual }) => {
   const [modal, setModal] = useState(false);
   const [meds, setMeds] = useState([{ nombre: "", dosis: "", via: "", frecuencia: "", duracion: "", indicaciones: "" }]);
   const [imprimiendo, setImprimiendo] = useState(null);
   const [firmandoPad, setFirmandoPad] = useState(null); // { recetaId, tipo }
+  const [guardando, setGuardando] = useState(false);
 
   const addMed = () => setMeds([...meds, { nombre: "", dosis: "", via: "", frecuencia: "", duracion: "", indicaciones: "" }]);
   const setMed = (i, c, v) => { const m = [...meds]; m[i][c] = v; setMeds(m); };
 
-  const guardar = () => {
-    const rx = { id: Date.now(), fecha: new Date().toLocaleDateString("es-MX"), medico: usuarioActual.nombre, cedula: usuarioActual.cedula, medicamentos: meds, firmada: true, firmaDigital: null, firmaPaciente: null };
-    onChange({ ...paciente, prescripciones: [...paciente.prescripciones, rx], bitacora: [...paciente.bitacora, { fecha: fechaHoraActual(), usuario: usuarioActual.nombre, accion: "AGREGAR_RECETA", detalle: `Receta #${rx.id}` }] });
-    setMeds([{ nombre: "", dosis: "", via: "", frecuencia: "", duracion: "", indicaciones: "" }]); setModal(false);
+  const guardar = async () => {
+    setGuardando(true);
+    try {
+      await onAgregar({ medicamentos: meds });
+      setMeds([{ nombre: "", dosis: "", via: "", frecuencia: "", duracion: "", indicaciones: "" }]);
+      setModal(false);
+    } catch (err) { alert(err.message); }
+    finally { setGuardando(false); }
   };
 
   const aplicarFirma = (dataUrl) => {
@@ -582,7 +659,7 @@ const Prescripciones = ({ paciente, onChange, usuarioActual }) => {
               ))}
               <button onClick={addMed} className="text-xs text-sky-400 hover:text-sky-300 self-start">+ Agregar medicamento</button>
               <div className="flex gap-2 pt-2">
-                <button onClick={guardar} className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm">Guardar receta</button>
+                <button onClick={guardar} disabled={guardando} className="flex-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm">{guardando ? "Guardando…" : "Guardar receta"}</button>
                 <button onClick={() => setModal(false)} className="px-4 bg-slate-800 text-slate-300 rounded-xl text-sm">Cancelar</button>
               </div>
             </div>
@@ -621,16 +698,20 @@ const TEXTOS_C = {
   transfusion: "Autorizo la transfusión de hemoderivados según criterio médico, habiendo sido informado(a) de las indicaciones médicas, los riesgos asociados, la verificación de compatibilidad y las alternativas disponibles. NOM-004-SSA3-2012 §8.8.",
 };
 
-const Consentimiento = ({ paciente, onChange, usuarioActual }) => {
+const Consentimiento = ({ paciente, onChange, onAgregar, usuarioActual }) => {
   const [modal, setModal] = useState(false);
   const [tipo, setTipo] = useState("consulta_general");
   const [testigo, setTestigo] = useState("");
   const [firmandoPad, setFirmandoPad] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const crear = () => {
-    const c = { id: Date.now(), fecha: fechaHoraActual(), tipo, texto: TEXTOS_C[tipo] || TEXTOS_C.consulta_general, firmado: false, testigo, firmaDigital: null, firmaMedico: null };
-    onChange({ ...paciente, consentimientos: [...paciente.consentimientos, c], bitacora: [...paciente.bitacora, { fecha: fechaHoraActual(), usuario: usuarioActual.nombre, accion: "CONSENTIMIENTO_CREADO", detalle: tipo }] });
-    setTestigo(""); setModal(false);
+  const crear = async () => {
+    setGuardando(true);
+    try {
+      await onAgregar({ tipo, texto: TEXTOS_C[tipo] || TEXTOS_C.consulta_general, testigo });
+      setTestigo(""); setModal(false);
+    } catch (err) { alert(err.message); }
+    finally { setGuardando(false); }
   };
 
   const aplicarFirma = (dataUrl, id, firmante) => {
@@ -697,7 +778,7 @@ const Consentimiento = ({ paciente, onChange, usuarioActual }) => {
               <Campo label="Nombre del testigo (opcional)" value={testigo} onChange={setTestigo} placeholder="Nombre completo del testigo" />
               <div className="bg-amber-900/20 border border-amber-800/40 rounded-lg p-3 text-xs text-amber-300">Al crear el documento, aparecerán los botones para capturar la firma digital del paciente y del médico. NOM-004 §8.8 · NOM-024-SSA3-2012.</div>
               <div className="flex gap-2">
-                <button onClick={crear} className="flex-1 bg-amber-700 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-sm">Crear consentimiento</button>
+                <button onClick={crear} disabled={guardando} className="flex-1 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm">{guardando ? "Guardando…" : "Crear consentimiento"}</button>
                 <button onClick={() => setModal(false)} className="px-4 bg-slate-800 text-slate-300 rounded-xl text-sm">Cancelar</button>
               </div>
             </div>
@@ -892,36 +973,122 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
   const [tab, setTab] = useState("identificacion");
   const [editando, setEditando] = useState(false);
   const [draft, setDraft] = useState(paciente);
+  const [cargando, setCargando] = useState(true);
+  const snapshotRef = useRef(null);
+
   const tabs = [{ id: "identificacion", label: "Identificación", icono: "👤" }, { id: "historia", label: "Historia Clínica", icono: "📋" }, { id: "notas", label: "Notas", icono: "🩺" }, { id: "prescripciones", label: "Recetas", icono: "💊" }, { id: "consentimientos", label: "Consentimientos", icono: "✍️" }, { id: "bitacora", label: "Bitácora", icono: "🔍" }];
-  const guardar = () => { const u = { ...draft, bitacora: [...draft.bitacora, { fecha: fechaHoraActual(), usuario: usuarioActual.nombre, accion: "MODIFICAR_DATOS", detalle: `Módulo: ${tab}` }] }; setPaciente(u); setDraft(u); setEditando(false); };
+
+  // Cargar todos los módulos desde la API al abrir el expediente
+  useEffect(() => {
+    setCargando(true);
+    Promise.all([
+      api.getHistoria(paciente.id).catch(() => null),
+      api.getNotas(paciente.id).catch(() => []),
+      api.getPrescripciones(paciente.id).catch(() => []),
+      api.getConsentimientos(paciente.id).catch(() => []),
+      api.getBitacora(paciente.id).catch(() => []),
+    ]).then(([hist, notas, rxs, conss, bits]) => {
+      const full = {
+        ...paciente,
+        historiaClinica: hist && Object.keys(hist).length > 1 ? fromHistoriaBackend(hist) : paciente.historiaClinica,
+        notas: notas.map(fromNotaBackend),
+        prescripciones: rxs.map(fromRxBackend),
+        consentimientos: conss.map(fromConsentBackend),
+        bitacora: bits.map(fromBitacoraBackend),
+      };
+      setDraft(full);
+      snapshotRef.current = full;
+    }).finally(() => setCargando(false));
+  }, [paciente.id]);
+
+  const guardar = async () => {
+    try {
+      if (tab === 'historia') {
+        const hc = draft.historiaClinica;
+        await api.updateHistoria(paciente.id, {
+          motivo_consulta: hc.motivoConsulta,
+          padecimiento_actual: hc.padecimientoActual,
+          antecedentes_heredofamiliares: hc.antecedentesHeredoFamiliares,
+          antecedentes_personales_patologicos: hc.antecedentesPersonalesPatologicos,
+          antecedentes_personales_no_patologicos: hc.antecedentesPersonalesNoPatologicos,
+          antecedentes_ginecoobstetricos: hc.antecedentesGinecoObstetricos,
+          antecedentes_pediatricos: hc.antecedentesPediatricos,
+          exploracion_fisica: hc.exploFisica,
+        });
+      } else {
+        // identificacion: delegar a App para que actualice la lista
+        await setPaciente(draft);
+      }
+      snapshotRef.current = { ...draft };
+      setEditando(false);
+    } catch (err) { alert(err.message); }
+  };
+
+  // Callbacks para que los módulos persistan datos sin recargar todo
+  const agregarNota = async (nota) => {
+    const nueva = await api.createNota(paciente.id, nota);
+    const mapped = fromNotaBackend({ ...nueva, autor_nombre: usuarioActual.nombre, autor_cedula: usuarioActual.cedula });
+    setDraft(prev => ({ ...prev, notas: [...prev.notas, mapped] }));
+    snapshotRef.current = { ...snapshotRef.current, notas: [...(snapshotRef.current?.notas || []), mapped] };
+  };
+
+  const agregarPrescripcion = async (data) => {
+    await api.createPrescripcion(paciente.id, data);
+    const rxs = await api.getPrescripciones(paciente.id);
+    const mapped = rxs.map(fromRxBackend);
+    setDraft(prev => ({ ...prev, prescripciones: mapped }));
+    snapshotRef.current = { ...snapshotRef.current, prescripciones: mapped };
+  };
+
+  const agregarConsentimiento = async (data) => {
+    await api.createConsentimiento(paciente.id, data);
+    const conss = await api.getConsentimientos(paciente.id);
+    const mapped = conss.map(fromConsentBackend);
+    setDraft(prev => ({ ...prev, consentimientos: mapped }));
+    snapshotRef.current = { ...snapshotRef.current, consentimientos: mapped };
+  };
+
   const soloLectura = !editando || (tab !== "identificacion" && tab !== "historia");
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 bg-slate-900 border-b border-slate-700 flex-wrap">
         <button onClick={onVolver} className="text-slate-400 hover:text-white text-sm">← Volver</button>
         <div className="w-px h-4 bg-slate-700" />
-        <div><p className="text-sm font-bold text-white">{paciente.identificacion.nombre}</p><p className="text-[10px] text-slate-500 font-mono">{paciente.folio} · {calcEdad(paciente.identificacion.fechaNacimiento)} · Creado: {paciente.fechaCreacion}</p></div>
-        {paciente.identificacion.alergias && <div className="flex items-center gap-1 bg-red-900/40 border border-red-700/50 rounded-lg px-2 py-1"><span className="text-xs">⚠️</span><span className="text-xs text-red-300 font-semibold">Alergias: {paciente.identificacion.alergias}</span></div>}
+        <div><p className="text-sm font-bold text-white">{draft.identificacion.nombre}</p><p className="text-[10px] text-slate-500 font-mono">{draft.folio} · {calcEdad(draft.identificacion.fechaNacimiento)} · Creado: {draft.fechaCreacion}</p></div>
+        {draft.identificacion.alergias && <div className="flex items-center gap-1 bg-red-900/40 border border-red-700/50 rounded-lg px-2 py-1"><span className="text-xs">⚠️</span><span className="text-xs text-red-300 font-semibold">Alergias: {draft.identificacion.alergias}</span></div>}
         <div className="ml-auto">
-          <ModalReporteExpediente paciente={paciente} usuarioActual={usuarioActual} />
+          <ModalReporteExpediente paciente={draft} usuarioActual={usuarioActual} />
         </div>
       </div>
       <div className="flex gap-1 px-4 py-2 bg-slate-900/60 border-b border-slate-800 overflow-x-auto">
         {tabs.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${tab === t.id ? "bg-sky-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"}`}><span>{t.icono}</span>{t.label}</button>)}
       </div>
       <div className="flex-1 overflow-y-auto p-4">
-        {(tab === "identificacion" || tab === "historia") && (
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-slate-500">{editando ? "Modo edición" : "Modo lectura"}</span>
-            {editando ? <div className="flex gap-2"><button onClick={guardar} className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Guardar</button><button onClick={() => { setDraft(paciente); setEditando(false); }} className="bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg">Cancelar</button></div> : <button onClick={() => setEditando(true)} className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg">✎ Editar</button>}
-          </div>
+        {cargando ? (
+          <div className="flex items-center justify-center py-20 text-slate-500 text-sm">Cargando expediente…</div>
+        ) : (
+          <>
+            {(tab === "identificacion" || tab === "historia") && (
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-slate-500">{editando ? "Modo edición" : "Modo lectura"}</span>
+                {editando
+                  ? <div className="flex gap-2">
+                      <button onClick={guardar} className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Guardar</button>
+                      <button onClick={() => { setDraft(snapshotRef.current || paciente); setEditando(false); }} className="bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg">Cancelar</button>
+                    </div>
+                  : <button onClick={() => setEditando(true)} className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg">✎ Editar</button>
+                }
+              </div>
+            )}
+            {tab === "identificacion" && <RegistroPaciente paciente={draft} onChange={setDraft} soloLectura={soloLectura} />}
+            {tab === "historia" && <HistoriaClinica paciente={draft} onChange={setDraft} soloLectura={soloLectura} />}
+            {tab === "notas" && <NotasEvolucion paciente={draft} onChange={setDraft} onAgregar={agregarNota} usuarioActual={usuarioActual} />}
+            {tab === "prescripciones" && <Prescripciones paciente={draft} onChange={setDraft} onAgregar={agregarPrescripcion} usuarioActual={usuarioActual} />}
+            {tab === "consentimientos" && <Consentimiento paciente={draft} onChange={setDraft} onAgregar={agregarConsentimiento} usuarioActual={usuarioActual} />}
+            {tab === "bitacora" && <Bitacora paciente={draft} />}
+          </>
         )}
-        {tab === "identificacion" && <RegistroPaciente paciente={draft} onChange={setDraft} soloLectura={soloLectura} />}
-        {tab === "historia" && <HistoriaClinica paciente={draft} onChange={setDraft} soloLectura={soloLectura} />}
-        {tab === "notas" && <NotasEvolucion paciente={paciente} onChange={p => { setPaciente(p); setDraft(p); }} usuarioActual={usuarioActual} />}
-        {tab === "prescripciones" && <Prescripciones paciente={paciente} onChange={p => { setPaciente(p); setDraft(p); }} usuarioActual={usuarioActual} />}
-        {tab === "consentimientos" && <Consentimiento paciente={paciente} onChange={p => { setPaciente(p); setDraft(p); }} usuarioActual={usuarioActual} />}
-        {tab === "bitacora" && <Bitacora paciente={paciente} />}
       </div>
     </div>
   );
@@ -1081,13 +1248,19 @@ export default function App() {
   };
 
   const actualizarPaciente = async (p) => {
-    try {
-      const payload = toBackend(p.identificacion || p);
-      const row = await api.updatePaciente(p.id, payload);
-      const actualizado = fromBackend(row);
-      setPacientes(prev => prev.map(x => x.id === actualizado.id ? actualizado : x));
-      setPacienteActivo(actualizado);
-    } catch (err) { alert(err.message); }
+    const payload = toBackend(p.identificacion || p);
+    const row = await api.updatePaciente(p.id, payload);
+    const rowMapped = fromBackend(row);
+    // Fusionar: tomar identificacion fresca del backend, conservar notas/historia/etc del draft
+    const actualizado = {
+      ...p,
+      folio: rowMapped.folio,
+      fechaCreacion: rowMapped.fechaCreacion,
+      usuarioCreadorId: rowMapped.usuarioCreadorId,
+      identificacion: rowMapped.identificacion,
+    };
+    setPacientes(prev => prev.map(x => x.id === actualizado.id ? actualizado : x));
+    // VistaExpediente gestiona su propio draft; no actualizamos pacienteActivo
   };
 
   const crearExpediente = async (nuevo) => {
