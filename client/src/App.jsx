@@ -1475,6 +1475,29 @@ export default function App() {
         alergias: id.alergias,
       };
       const creado = fromBackend(await api.createPaciente(payload));
+
+      // Guardar historia clínica si el usuario llenó algún campo durante la creación
+      const hc = nuevo.historiaClinica;
+      const tieneHistoria = hc && (
+        hc.motivoConsulta || hc.padecimientoActual ||
+        hc.antecedentesHeredoFamiliares || hc.antecedentesPersonalesPatologicos ||
+        hc.antecedentesPersonalesNoPatologicos || hc.antecedentesGinecoObstetricos ||
+        hc.antecedentesPediatricos ||
+        (hc.exploFisica && Object.values(hc.exploFisica).some(v => v))
+      );
+      if (tieneHistoria) {
+        await api.updateHistoria(creado.id, {
+          motivo_consulta: hc.motivoConsulta,
+          padecimiento_actual: hc.padecimientoActual,
+          antecedentes_heredofamiliares: hc.antecedentesHeredoFamiliares,
+          antecedentes_personales_patologicos: hc.antecedentesPersonalesPatologicos,
+          antecedentes_personales_no_patologicos: hc.antecedentesPersonalesNoPatologicos,
+          antecedentes_ginecoobstetricos: hc.antecedentesGinecoObstetricos,
+          antecedentes_pediatricos: hc.antecedentesPediatricos,
+          exploracion_fisica: hc.exploFisica,
+        });
+      }
+
       setPacientes(prev => [creado, ...prev]);
       setVista("lista");
     } catch (err) { alert(err.message); }
