@@ -1200,19 +1200,17 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
   };
 
   const agregarPrescripcion = async (data) => {
-    await api.createPrescripcion(paciente.id, data);
-    const rxs = await api.getPrescripciones(paciente.id);
-    const mapped = rxs.map(fromRxBackend);
-    setDraft(prev => ({ ...prev, prescripciones: mapped }));
-    snapshotRef.current = { ...snapshotRef.current, prescripciones: mapped };
+    const nueva = await api.createPrescripcion(paciente.id, data);
+    const mapped = fromRxBackend(nueva);
+    setDraft(prev => ({ ...prev, prescripciones: [mapped, ...prev.prescripciones] }));
+    snapshotRef.current = { ...snapshotRef.current, prescripciones: [mapped, ...(snapshotRef.current?.prescripciones || [])] };
   };
 
   const agregarConsentimiento = async (data) => {
-    await api.createConsentimiento(paciente.id, data);
-    const conss = await api.getConsentimientos(paciente.id);
-    const mapped = conss.map(fromConsentBackend);
-    setDraft(prev => ({ ...prev, consentimientos: mapped }));
-    snapshotRef.current = { ...snapshotRef.current, consentimientos: mapped };
+    const nuevo = await api.createConsentimiento(paciente.id, data);
+    const mapped = fromConsentBackend(nuevo);
+    setDraft(prev => ({ ...prev, consentimientos: [mapped, ...prev.consentimientos] }));
+    snapshotRef.current = { ...snapshotRef.current, consentimientos: [mapped, ...(snapshotRef.current?.consentimientos || [])] };
   };
 
   const agregarLabSolicitud = async (data) => {

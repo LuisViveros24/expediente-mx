@@ -266,7 +266,17 @@ router.post('/:id/prescripciones', requireRol('medico','admin','superadmin'), as
       )
     }
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'CREAR_RECETA', `Receta #${prescripcionId}`)
-    res.status(201).json({ id: prescripcionId })
+
+    // Devolver la receta completa con info del médico y medicamentos
+    const [rows] = await db.query(
+      `SELECT p.*, u.nombre as medico_nombre, u.cedula as medico_cedula
+       FROM prescripciones p JOIN usuarios u ON u.id = p.medico_id
+       WHERE p.id = ?`,
+      [prescripcionId]
+    )
+    const [meds] = await db.query('SELECT * FROM prescripcion_medicamentos WHERE prescripcion_id = ?', [prescripcionId])
+    rows[0].medicamentos = meds
+    res.status(201).json(rows[0])
   } catch (err) { next(err) }
 })
 
@@ -295,7 +305,10 @@ router.post('/:id/consentimientos', requireRol('medico','enfermera','admin','sup
       [req.params.id, tipo, texto||'', !!(firma_digital||firma_medico), testigo||null, firma_digital||null, firma_medico||null]
     )
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'AGREGAR_CONSENTIMIENTO', tipo)
-    res.status(201).json({ id: result.insertId })
+
+    // Devolver el consentimiento completo
+    const [rows] = await db.query('SELECT * FROM consentimientos WHERE id = ?', [result.insertId])
+    res.status(201).json(rows[0])
   } catch (err) { next(err) }
 })
 
