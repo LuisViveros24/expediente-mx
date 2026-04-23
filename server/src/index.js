@@ -6,6 +6,7 @@ dotenv.config()
 
 import authRoutes from './routes/auth.js'
 import pacientesRoutes from './routes/pacientes.js'
+import laboratorioRoutes from './routes/laboratorio.js'
 import notasRoutes from './routes/notas.js'
 import prescripcionesRoutes from './routes/prescripciones.js'
 import consentimientosRoutes from './routes/consentimientos.js'
@@ -39,6 +40,7 @@ app.use('/api/v1', resolverTenant, verificarToken)
 
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/pacientes', pacientesRoutes)
+app.use('/api/v1/pacientes/:id/laboratorio', laboratorioRoutes)
 app.use('/api/v1/notas', notasRoutes)
 app.use('/api/v1/prescripciones', prescripcionesRoutes)
 app.use('/api/v1/consentimientos', consentimientosRoutes)

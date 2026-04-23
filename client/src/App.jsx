@@ -90,6 +90,20 @@ const fromBitacoraBackend = (b) => ({
   detalle: b.detalle || '',
 });
 
+const fromLabSolicitudBackend = (s) => ({
+  id: s.id,
+  fecha: s.fecha_solicitud ? new Date(s.fecha_solicitud).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '',
+  solicitante: s.solicitante_nombre || '',
+  cedula: s.solicitante_cedula || '',
+  observaciones: s.observaciones || '',
+  examenes: (s.examenes || []).map(e => ({
+    id: e.id,
+    nombre: e.nombre,
+    recibido: !!e.recibido,
+    fechaRecepcion: e.fecha_recepcion ? new Date(e.fecha_recepcion).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : null,
+  })),
+});
+
 // Convierte fila plana de MySQL → objeto anidado del frontend
 const fromBackend = (row) => ({
   id: row.id,
@@ -508,7 +522,7 @@ const NotasEvolucion = ({ paciente, onChange, onAgregar, usuarioActual }) => {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-slate-300">Notas de Evolución SOAP (NOM-004 §8.5)</h3>
-        {usuarioActual.rol === "medico" && <button onClick={() => setModal(true)} className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-2 rounded-lg">+ Nueva nota</button>}
+        {["medico","enfermera","admin","superadmin"].includes(usuarioActual.rol) && <button onClick={() => setModal(true)} className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-2 rounded-lg">+ Nueva nota</button>}
       </div>
       {paciente.notas.length === 0 && <div className="text-center py-10 text-slate-600 text-sm">Sin notas registradas.</div>}
       <div className="flex flex-col gap-3">
@@ -585,7 +599,7 @@ const Prescripciones = ({ paciente, onChange, onAgregar, usuarioActual }) => {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-slate-300">Hoja de Indicaciones / Recetas (NOM-004 §8.7)</h3>
-        {usuarioActual.rol === "medico" && <button onClick={() => setModal(true)} className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-lg">+ Nueva receta</button>}
+        {["medico","admin","superadmin"].includes(usuarioActual.rol) && <button onClick={() => setModal(true)} className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-lg">+ Nueva receta</button>}
       </div>
       {paciente.prescripciones.length === 0 && <div className="text-center py-10 text-slate-600 text-sm">Sin prescripciones registradas.</div>}
 
@@ -798,6 +812,157 @@ const Consentimiento = ({ paciente, onChange, onAgregar, usuarioActual }) => {
 };
 
 // ══════════════════════════════════════════════════════════════════
+// MÓDULO: EXÁMENES DE LABORATORIO
+// ══════════════════════════════════════════════════════════════════
+const ExamenesLaboratorio = ({ solicitudes, onAgregar, onMarcarRecibido, usuarioActual }) => {
+  const [modal, setModal] = useState(false);
+  const [examenes, setExamenes] = useState([""]);
+  const [observaciones, setObservaciones] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  const addExamen = () => setExamenes([...examenes, ""]);
+  const setExamen = (i, v) => { const arr = [...examenes]; arr[i] = v; setExamenes(arr); };
+  const removeExamen = (i) => setExamenes(examenes.filter((_, x) => x !== i));
+
+  const guardar = async () => {
+    const limpios = examenes.map(e => e.trim()).filter(Boolean);
+    if (!limpios.length) { alert("Agrega al menos un examen"); return; }
+    setGuardando(true);
+    try {
+      await onAgregar({ examenes: limpios, observaciones });
+      setExamenes([""]); setObservaciones(""); setModal(false);
+    } catch (err) { alert(err.message); }
+    finally { setGuardando(false); }
+  };
+
+  const toggleRecibido = async (solicitudId, examenId, actual) => {
+    try { await onMarcarRecibido(examenId, !actual); }
+    catch (err) { alert(err.message); }
+  };
+
+  const puedeAgregar = ["medico","admin","superadmin"].includes(usuarioActual.rol);
+  const puedeMarcar  = ["medico","recepcion","admin","superadmin"].includes(usuarioActual.rol);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-slate-300">Exámenes de Laboratorio (NOM-004 §8.4)</h3>
+        {puedeAgregar && (
+          <button onClick={() => setModal(true)} className="bg-violet-700 hover:bg-violet-600 text-white text-xs font-bold px-3 py-2 rounded-lg">
+            + Nueva solicitud
+          </button>
+        )}
+      </div>
+
+      {solicitudes.length === 0 && (
+        <div className="text-center py-10 text-slate-600 text-sm">Sin exámenes solicitados.</div>
+      )}
+
+      <div className="flex flex-col gap-4">
+        {solicitudes.map(s => {
+          const totalRecibidos = s.examenes.filter(e => e.recibido).length;
+          const completa = totalRecibidos === s.examenes.length && s.examenes.length > 0;
+          return (
+            <div key={s.id} className="border border-slate-700 rounded-xl overflow-hidden">
+              {/* Encabezado solicitud */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800/60 flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-violet-400">{s.fecha}</span>
+                  <span className="text-xs text-slate-300 font-medium">{s.solicitante}</span>
+                  <span className="text-[10px] text-slate-500">Céd: {s.cedula}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {completa
+                    ? <Badge label="✓ Todos recibidos" color="green" />
+                    : <Badge label={`${totalRecibidos}/${s.examenes.length} recibidos`} color="amber" />
+                  }
+                </div>
+              </div>
+
+              {/* Lista de exámenes */}
+              <div className="p-4 flex flex-col gap-2">
+                {s.examenes.map(e => (
+                  <div key={e.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 ${e.recibido ? "bg-emerald-900/20 border border-emerald-800/40" : "bg-slate-800/40 border border-slate-700"}`}>
+                    {puedeMarcar ? (
+                      <button
+                        onClick={() => toggleRecibido(s.id, e.id, e.recibido)}
+                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-all ${e.recibido ? "bg-emerald-600 border-emerald-500 text-white" : "border-slate-500 hover:border-sky-400"}`}
+                      >
+                        {e.recibido && <span className="text-[10px] font-bold">✓</span>}
+                      </button>
+                    ) : (
+                      <div className={`w-5 h-5 rounded shrink-0 border-2 flex items-center justify-center ${e.recibido ? "bg-emerald-600 border-emerald-500 text-white" : "border-slate-600"}`}>
+                        {e.recibido && <span className="text-[10px] font-bold">✓</span>}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm ${e.recibido ? "text-emerald-300" : "text-slate-200"}`}>{e.nombre}</p>
+                      {e.recibido && e.fechaRecepcion && (
+                        <p className="text-[10px] text-emerald-500">Recibido: {e.fechaRecepcion}</p>
+                      )}
+                    </div>
+                    {!e.recibido && <span className="text-[10px] text-amber-500 font-semibold">Pendiente</span>}
+                  </div>
+                ))}
+                {s.observaciones && (
+                  <p className="text-xs text-slate-500 mt-1 italic">Obs: {s.observaciones}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal nueva solicitud */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+              <h3 className="font-bold text-white">Nueva Solicitud de Laboratorio</h3>
+              <button onClick={() => setModal(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            <div className="p-5 flex flex-col gap-4">
+              <div className="bg-violet-900/20 border border-violet-800/40 rounded-lg px-3 py-2 text-xs text-violet-300">
+                Médico: <strong>{usuarioActual.nombre}</strong> · Cédula: {usuarioActual.cedula}
+              </div>
+
+              <div>
+                <p className="text-[11px] text-slate-400 uppercase tracking-widest mb-2">Exámenes solicitados</p>
+                <div className="flex flex-col gap-2">
+                  {examenes.map((e, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        value={e}
+                        onChange={ev => setExamen(i, ev.target.value)}
+                        placeholder={`Ej: Biometría hemática completa`}
+                        className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                      />
+                      {examenes.length > 1 && (
+                        <button onClick={() => removeExamen(i)} className="text-slate-500 hover:text-red-400 text-sm px-1">✕</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={addExamen} className="mt-2 text-xs text-violet-400 hover:text-violet-300">+ Agregar otro examen</button>
+              </div>
+
+              <Campo label="Observaciones (opcional)" value={observaciones} onChange={setObservaciones} rows={2} placeholder="Indicaciones especiales, ayuno, etc." />
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={guardar} disabled={guardando} className="flex-1 bg-violet-700 hover:bg-violet-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm">
+                  {guardando ? "Guardando…" : "Solicitar exámenes"}
+                </button>
+                <button onClick={() => setModal(false)} className="px-4 bg-slate-800 text-slate-300 rounded-xl text-sm">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════
 // MÓDULO: BITÁCORA
 // ══════════════════════════════════════════════════════════════════
 const Bitacora = ({ paciente }) => {
@@ -976,7 +1141,7 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
   const [cargando, setCargando] = useState(true);
   const snapshotRef = useRef(null);
 
-  const tabs = [{ id: "identificacion", label: "Identificación", icono: "👤" }, { id: "historia", label: "Historia Clínica", icono: "📋" }, { id: "notas", label: "Notas", icono: "🩺" }, { id: "prescripciones", label: "Recetas", icono: "💊" }, { id: "consentimientos", label: "Consentimientos", icono: "✍️" }, { id: "bitacora", label: "Bitácora", icono: "🔍" }];
+  const tabs = [{ id: "identificacion", label: "Identificación", icono: "👤" }, { id: "historia", label: "Historia Clínica", icono: "📋" }, { id: "notas", label: "Notas", icono: "🩺" }, { id: "prescripciones", label: "Recetas", icono: "💊" }, { id: "laboratorio", label: "Laboratorio", icono: "🔬" }, { id: "consentimientos", label: "Consentimientos", icono: "✍️" }, { id: "bitacora", label: "Bitácora", icono: "🔍" }];
 
   // Cargar todos los módulos desde la API al abrir el expediente
   useEffect(() => {
@@ -987,7 +1152,8 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
       api.getPrescripciones(paciente.id).catch(() => []),
       api.getConsentimientos(paciente.id).catch(() => []),
       api.getBitacora(paciente.id).catch(() => []),
-    ]).then(([hist, notas, rxs, conss, bits]) => {
+      api.getLaboratorio(paciente.id).catch(() => []),
+    ]).then(([hist, notas, rxs, conss, bits, labs]) => {
       const full = {
         ...paciente,
         historiaClinica: hist && Object.keys(hist).length > 1 ? fromHistoriaBackend(hist) : paciente.historiaClinica,
@@ -995,6 +1161,7 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
         prescripciones: rxs.map(fromRxBackend),
         consentimientos: conss.map(fromConsentBackend),
         bitacora: bits.map(fromBitacoraBackend),
+        laboratorio: labs.map(fromLabSolicitudBackend),
       };
       setDraft(full);
       snapshotRef.current = full;
@@ -1048,6 +1215,27 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
     snapshotRef.current = { ...snapshotRef.current, consentimientos: mapped };
   };
 
+  const agregarLabSolicitud = async (data) => {
+    const nueva = await api.createLabSolicitud(paciente.id, data);
+    const mapped = fromLabSolicitudBackend(nueva);
+    setDraft(prev => ({ ...prev, laboratorio: [mapped, ...(prev.laboratorio || [])] }));
+    snapshotRef.current = { ...snapshotRef.current, laboratorio: [mapped, ...(snapshotRef.current?.laboratorio || [])] };
+  };
+
+  const marcarExamenRecibido = async (examenId, recibido) => {
+    const updated = await api.marcarExamenRecibido(paciente.id, examenId, recibido);
+    setDraft(prev => ({
+      ...prev,
+      laboratorio: (prev.laboratorio || []).map(s => ({
+        ...s,
+        examenes: s.examenes.map(e => e.id === examenId
+          ? { ...e, recibido: updated.recibido, fechaRecepcion: updated.fecha_recepcion ? new Date(updated.fecha_recepcion).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : null }
+          : e
+        ),
+      })),
+    }));
+  };
+
   const soloLectura = !editando || (tab !== "identificacion" && tab !== "historia");
 
   return (
@@ -1085,6 +1273,7 @@ const VistaExpediente = ({ paciente, setPaciente, usuarioActual, onVolver }) => 
             {tab === "historia" && <HistoriaClinica paciente={draft} onChange={setDraft} soloLectura={soloLectura} />}
             {tab === "notas" && <NotasEvolucion paciente={draft} onChange={setDraft} onAgregar={agregarNota} usuarioActual={usuarioActual} />}
             {tab === "prescripciones" && <Prescripciones paciente={draft} onChange={setDraft} onAgregar={agregarPrescripcion} usuarioActual={usuarioActual} />}
+            {tab === "laboratorio" && <ExamenesLaboratorio solicitudes={draft.laboratorio || []} onAgregar={agregarLabSolicitud} onMarcarRecibido={marcarExamenRecibido} usuarioActual={usuarioActual} />}
             {tab === "consentimientos" && <Consentimiento paciente={draft} onChange={setDraft} onAgregar={agregarConsentimiento} usuarioActual={usuarioActual} />}
             {tab === "bitacora" && <Bitacora paciente={draft} />}
           </>

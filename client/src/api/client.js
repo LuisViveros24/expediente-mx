@@ -78,6 +78,13 @@ export const createConsentimiento = (id, data) =>
 export const getBitacora = (id) => apiFetch(`/pacientes/${id}/bitacora`)
 export const getBitacoraGlobal = () => apiFetch('/bitacora')
 
+// Laboratorio
+export const getLaboratorio = (id) => apiFetch(`/pacientes/${id}/laboratorio`)
+export const createLabSolicitud = (id, data) =>
+  apiFetch(`/pacientes/${id}/laboratorio`, { method: 'POST', body: data })
+export const marcarExamenRecibido = (pacienteId, examenId, recibido) =>
+  apiFetch(`/pacientes/${pacienteId}/laboratorio/examenes/${examenId}`, { method: 'PUT', body: { recibido } })
+
 // Usuarios
 export const getUsuarios = () => apiFetch('/usuarios')
 export const createUsuario = (data) =>
