@@ -87,9 +87,22 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
     )
 
     const pacienteId = result.insertId
+    const year = new Date().getFullYear()
 
-    // Folio único: EXP-YYYY-000001 basado en el ID autoincremental
-    const folioFinal = `EXP-${new Date().getFullYear()}-${String(pacienteId).padStart(6, '0')}`
+    // Folio reutilizable: busca el primer número libre para el año actual
+    // (los folios de expedientes archivados quedan disponibles)
+    const [foliosActivos] = await db.query(
+      `SELECT CAST(SUBSTRING_INDEX(folio, '-', -1) AS UNSIGNED) AS num
+       FROM pacientes
+       WHERE folio LIKE ? AND activo = TRUE AND id != ?
+       ORDER BY num ASC`,
+      [`EXP-${year}-%`, pacienteId]
+    )
+    const usados = new Set(foliosActivos.map(r => r.num))
+    let siguiente = 1
+    while (usados.has(siguiente)) siguiente++
+
+    const folioFinal = `EXP-${year}-${String(siguiente).padStart(6, '0')}`
     await db.query('UPDATE pacientes SET folio = ? WHERE id = ?', [folioFinal, pacienteId])
 
     await db.query('INSERT INTO historia_clinica (paciente_id) VALUES (?)', [pacienteId])
