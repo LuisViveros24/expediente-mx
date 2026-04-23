@@ -5,15 +5,19 @@ import { registrar } from '../utils/bitacora.js'
 
 const router = Router()
 
+// Helper: cuando clinicaId es null (acceso directo sin subdominio) no filtra por clínica
+const cFiltro = (clinicaId) =>
+  clinicaId !== null && clinicaId !== undefined
+    ? { sql: 'clinica_id = ?', params: [clinicaId] }
+    : { sql: '1=1',            params: [] }
+
 // GET /api/v1/pacientes — superadmin ve todos, cada usuario ve solo los suyos
 router.get('/', async (req, res, next) => {
   try {
     let rows
     if (req.usuario.rol === 'superadmin') {
-      // Superadmin ve todos sin filtro de clinica
       ;[rows] = await db.query('SELECT * FROM pacientes WHERE activo = TRUE ORDER BY creado_en DESC')
     } else {
-      // Cada usuario ve únicamente sus propios expedientes
       ;[rows] = await db.query(
         'SELECT * FROM pacientes WHERE usuario_creador_id = ? AND activo = TRUE ORDER BY creado_en DESC',
         [req.usuario.id]
@@ -26,9 +30,10 @@ router.get('/', async (req, res, next) => {
 // GET /api/v1/pacientes/:id
 router.get('/:id', async (req, res, next) => {
   try {
+    const cf = cFiltro(req.clinicaId)
     const [rows] = await db.query(
-      'SELECT * FROM pacientes WHERE id = ? AND clinica_id = ? AND activo = TRUE',
-      [req.params.id, req.clinicaId]
+      `SELECT * FROM pacientes WHERE id = ? AND ${cf.sql} AND activo = TRUE`,
+      [req.params.id, ...cf.params]
     )
     if (!rows[0]) return res.status(404).json({ error: 'Paciente no encontrado' })
     res.json(rows[0])
@@ -48,14 +53,17 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
       const [uRows] = await db.query('SELECT limite_expedientes FROM usuarios WHERE id = ?', [req.usuario.id])
       const limite = uRows[0]?.limite_expedientes
       if (limite !== null && limite !== undefined) {
-        const [cnt] = await db.query('SELECT COUNT(*) as total FROM pacientes WHERE usuario_creador_id = ? AND activo = TRUE', [req.usuario.id])
+        const [cnt] = await db.query(
+          'SELECT COUNT(*) as total FROM pacientes WHERE usuario_creador_id = ? AND activo = TRUE',
+          [req.usuario.id]
+        )
         if (cnt[0].total >= limite) {
           return res.status(403).json({ error: `Límite de expedientes alcanzado (${limite}). Contacta al administrador.` })
         }
       }
     }
 
-    // Insertar con folio temporal — se actualiza con el insertId para garantizar unicidad
+    // Insertar con folio temporal — se actualiza con insertId para garantizar unicidad
     const [result] = await db.query(
       `INSERT INTO pacientes
         (clinica_id, folio, fecha_creacion, usuario_creador_id,
@@ -66,7 +74,9 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
          grupo_sanguineo, alergias)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        req.clinicaId, 'TEMP', fecha_creacion || new Date().toISOString().split('T')[0],
+        req.clinicaId || null,
+        'TEMP',
+        fecha_creacion || new Date().toISOString().split('T')[0],
         req.usuario.id, nombre, fecha_nacimiento, sexo,
         resto.curp||null, resto.rfc||null, resto.estado_civil||null,
         resto.escolaridad||null, resto.ocupacion||null, resto.nacionalidad||null,
@@ -78,7 +88,7 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
 
     const pacienteId = result.insertId
 
-    // Folio único basado en el ID autoincremental: EXP-YYYY-000123
+    // Folio único: EXP-YYYY-000001 basado en el ID autoincremental
     const folioFinal = `EXP-${new Date().getFullYear()}-${String(pacienteId).padStart(6, '0')}`
     await db.query('UPDATE pacientes SET folio = ? WHERE id = ?', [folioFinal, pacienteId])
 
@@ -93,9 +103,10 @@ router.post('/', requireRol('medico','recepcion','admin','superadmin'), async (r
 // PUT /api/v1/pacientes/:id — actualizar identificación
 router.put('/:id', requireRol('medico','recepcion','admin','superadmin'), async (req, res, next) => {
   try {
+    const cf = cFiltro(req.clinicaId)
     const [existe] = await db.query(
-      'SELECT id FROM pacientes WHERE id = ? AND clinica_id = ?',
-      [req.params.id, req.clinicaId]
+      `SELECT id FROM pacientes WHERE id = ? AND ${cf.sql}`,
+      [req.params.id, ...cf.params]
     )
     if (!existe[0]) return res.status(404).json({ error: 'Paciente no encontrado' })
 
@@ -110,8 +121,8 @@ router.put('/:id', requireRol('medico','recepcion','admin','superadmin'), async 
     if (!sets) return res.status(400).json({ error: 'No hay campos para actualizar' })
 
     await db.query(
-      `UPDATE pacientes SET ${sets} WHERE id = ? AND clinica_id = ?`,
-      [...vals, req.params.id, req.clinicaId]
+      `UPDATE pacientes SET ${sets} WHERE id = ?`,
+      [...vals, req.params.id]
     )
 
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ACTUALIZAR_IDENTIFICACION', '')
@@ -122,8 +133,7 @@ router.put('/:id', requireRol('medico','recepcion','admin','superadmin'), async 
 })
 
 // DELETE /api/v1/pacientes/:id
-// Superadmin: puede archivar cualquier expediente
-// Otros roles: solo pueden archivar sus propios expedientes
+// Superadmin: cualquier expediente · Otros: solo los propios
 router.delete('/:id', requireRol('medico','recepcion','admin','superadmin'), async (req, res, next) => {
   try {
     let existe
@@ -139,10 +149,7 @@ router.delete('/:id', requireRol('medico','recepcion','admin','superadmin'), asy
       )
     }
     if (!existe[0]) return res.status(404).json({ error: 'Expediente no encontrado o sin permiso para archivarlo' })
-    await db.query(
-      'UPDATE pacientes SET activo = FALSE WHERE id = ?',
-      [req.params.id]
-    )
+    await db.query('UPDATE pacientes SET activo = FALSE WHERE id = ?', [req.params.id])
     await registrar(req.clinicaId, req.usuario.id, req.params.id, 'ARCHIVAR_EXPEDIENTE', 'NOM-004: registro archivado, no eliminado')
     res.json({ ok: true })
   } catch (err) { next(err) }
@@ -151,11 +158,12 @@ router.delete('/:id', requireRol('medico','recepcion','admin','superadmin'), asy
 // GET /api/v1/pacientes/:id/historia
 router.get('/:id/historia', async (req, res, next) => {
   try {
+    const cf = cFiltro(req.clinicaId)
     const [rows] = await db.query(
       `SELECT h.* FROM historia_clinica h
        JOIN pacientes p ON p.id = h.paciente_id
-       WHERE h.paciente_id = ? AND p.clinica_id = ?`,
-      [req.params.id, req.clinicaId]
+       WHERE h.paciente_id = ? AND ${cf.sql}`,
+      [req.params.id, ...cf.params]
     )
     res.json(rows[0] || {})
   } catch (err) { next(err) }
@@ -172,11 +180,13 @@ router.put('/:id/historia', requireRol('medico','enfermera','admin','superadmin'
       c === 'exploracion_fisica' ? JSON.stringify(req.body[c]) : req.body[c]
     )
     if (!sets) return res.status(400).json({ error: 'Sin campos' })
+
+    const cf = cFiltro(req.clinicaId)
     const [existe] = await db.query(
       `SELECT h.id FROM historia_clinica h
        JOIN pacientes p ON p.id = h.paciente_id
-       WHERE h.paciente_id = ? AND p.clinica_id = ?`,
-      [req.params.id, req.clinicaId]
+       WHERE h.paciente_id = ? AND ${cf.sql}`,
+      [req.params.id, ...cf.params]
     )
     if (!existe[0]) return res.status(404).json({ error: 'Historia clínica no encontrada' })
     await db.query(`UPDATE historia_clinica SET ${sets} WHERE paciente_id = ?`, [...vals, req.params.id])
@@ -188,14 +198,15 @@ router.put('/:id/historia', requireRol('medico','enfermera','admin','superadmin'
 // GET /api/v1/pacientes/:id/notas
 router.get('/:id/notas', async (req, res, next) => {
   try {
+    const cf = cFiltro(req.clinicaId)
     const [rows] = await db.query(
       `SELECT n.*, u.nombre as autor_nombre, u.cedula as autor_cedula
        FROM notas n
        JOIN usuarios u ON u.id = n.autor_id
        JOIN pacientes p ON p.id = n.paciente_id
-       WHERE n.paciente_id = ? AND p.clinica_id = ?
+       WHERE n.paciente_id = ? AND ${cf.sql}
        ORDER BY n.fecha DESC`,
-      [req.params.id, req.clinicaId]
+      [req.params.id, ...cf.params]
     )
     res.json(rows)
   } catch (err) { next(err) }
@@ -219,14 +230,15 @@ router.post('/:id/notas', requireRol('medico','enfermera','admin','superadmin'),
 // GET /api/v1/pacientes/:id/prescripciones
 router.get('/:id/prescripciones', async (req, res, next) => {
   try {
+    const cf = cFiltro(req.clinicaId)
     const [recetas] = await db.query(
       `SELECT p.*, u.nombre as medico_nombre, u.cedula as medico_cedula
        FROM prescripciones p
        JOIN usuarios u ON u.id = p.medico_id
        JOIN pacientes pa ON pa.id = p.paciente_id
-       WHERE p.paciente_id = ? AND pa.clinica_id = ?
+       WHERE p.paciente_id = ? AND ${cf.sql}
        ORDER BY p.fecha DESC`,
-      [req.params.id, req.clinicaId]
+      [req.params.id, ...cf.params]
     )
     for (const r of recetas) {
       const [meds] = await db.query('SELECT * FROM prescripcion_medicamentos WHERE prescripcion_id = ?', [r.id])
@@ -261,12 +273,13 @@ router.post('/:id/prescripciones', requireRol('medico','admin','superadmin'), as
 // GET /api/v1/pacientes/:id/consentimientos
 router.get('/:id/consentimientos', async (req, res, next) => {
   try {
+    const cf = cFiltro(req.clinicaId)
     const [rows] = await db.query(
       `SELECT c.* FROM consentimientos c
        JOIN pacientes p ON p.id = c.paciente_id
-       WHERE c.paciente_id = ? AND p.clinica_id = ?
+       WHERE c.paciente_id = ? AND ${cf.sql}
        ORDER BY c.fecha DESC`,
-      [req.params.id, req.clinicaId]
+      [req.params.id, ...cf.params]
     )
     res.json(rows)
   } catch (err) { next(err) }
@@ -293,9 +306,9 @@ router.get('/:id/bitacora', requireRol('medico','admin','superadmin'), async (re
       `SELECT b.*, u.nombre as usuario_nombre
        FROM bitacora b
        LEFT JOIN usuarios u ON u.id = b.usuario_id
-       WHERE b.paciente_id = ? AND b.clinica_id = ?
+       WHERE b.paciente_id = ?
        ORDER BY b.fecha DESC`,
-      [req.params.id, req.clinicaId]
+      [req.params.id]
     )
     res.json(rows)
   } catch (err) { next(err) }
