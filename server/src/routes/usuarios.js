@@ -8,9 +8,10 @@ const router = Router()
 // GET /api/v1/usuarios
 router.get('/', requireRol('admin','superadmin'), async (req, res, next) => {
   try {
+    const whereClinica = req.clinicaId ? 'clinica_id = ?' : 'clinica_id IS NULL'
     const [rows] = await db.query(
-      'SELECT id, nombre, email, cedula, rol, activo, limite_expedientes, creado_en FROM usuarios WHERE clinica_id = ?',
-      [req.clinicaId]
+      `SELECT id, nombre, email, cedula, rol, activo, limite_expedientes, creado_en FROM usuarios WHERE ${whereClinica}`,
+      req.clinicaId ? [req.clinicaId] : []
     )
     // Agregar conteo de expedientes por usuario
     for (const u of rows) {
@@ -55,9 +56,10 @@ router.put('/:id', requireRol('admin','superadmin'), async (req, res, next) => {
       updates.push('password_hash = ?'); vals.push(hash)
     }
     if (!updates.length) return res.status(400).json({ error: 'Sin campos' })
+    const whereClinica = req.clinicaId ? 'AND clinica_id = ?' : 'AND clinica_id IS NULL'
     await db.query(
-      `UPDATE usuarios SET ${updates.join(', ')} WHERE id = ? AND clinica_id = ?`,
-      [...vals, req.params.id, req.clinicaId]
+      `UPDATE usuarios SET ${updates.join(', ')} WHERE id = ? ${whereClinica}`,
+      req.clinicaId ? [...vals, req.params.id, req.clinicaId] : [...vals, req.params.id]
     )
     res.json({ ok: true })
   } catch (err) { next(err) }
